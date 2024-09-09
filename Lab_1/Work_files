@@ -31,8 +31,11 @@ sudo touch Мушкарин\ Дмитрий\ Евгеньевич/Result_one
 
 tac "Text @1" | rev > Мушкарин\ Дмитрий\ Евгеньевич/Result_one
 10.
-mv Мушкарин\ Дмитрий\ Евгеньевич/Result_one Мушкарин\ Дмитрий\ Евгеньевич/Result.two
+mv Мушкарин\ Дмитрий\ Евгеньевич/Result_one Мушкарин\ Дмитрий\ Евгеньевич/Result_two
 11.
+cd Мушкарин\ Дмитрий\ Евгеньевич/
 touch Result_3
+find . -name "T*" -print0 | xargs -0 cat > Result_3
 
-
+uname -a >> Result_3
+date >> Result_3

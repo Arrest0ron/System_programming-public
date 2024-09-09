@@ -1,3 +1,4 @@
+(gdb) disassemble main
 Dump of assembler code for function main:
    0x0000000000001149 <+0>:     endbr64 
    0x000000000000114d <+4>:     push   %rbp

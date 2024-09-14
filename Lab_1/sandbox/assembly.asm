@@ -2,6 +2,7 @@ format ELF
 public _start
 msg db "Mushkarin", 0xA, "Dmitri", 0xA,"Evgenievich", 0xA, 0
 
+
 _start:
     mov eax, 4
     mov ebx, 1

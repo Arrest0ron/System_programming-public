@@ -3,7 +3,7 @@ public _start
 
 section '.bss' writeable
     number dq 1111111111      ; Заданное число
-    sum dq 0                    ; сумма цифор
+    sum dq 0                    ; сумма цифр
     string db ?
     cycle dq 0
 

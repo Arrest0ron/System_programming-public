@@ -5,7 +5,7 @@ exit:
 	mov rsi, 0
 	syscall
 
-;saves len of 0-terminated string from [rsi] into rdx
+;saves the len of 0-terminated string from [rsi] to rdx
 get_len:
 	xor rdx, rdx
 	.iter:
@@ -66,6 +66,7 @@ stoi:
 	pop rbx
 	ret
 
+;prints all the args if stack depth = 0
 print_args:
 	pop rbx
 	pop rcx ;amount of arguments

@@ -44,14 +44,12 @@ stoi:
 	xor rax, rax
 	xor rcx, rcx
 	.loop:
-		xor rdx, rdx
-		mov byte dl, [rsi+rcx]
-		cmp dl, 48
-		jl .end
-
-
-		cmp dl, 57
-		jg .end
+	xor rdx, rdx
+	mov byte dl, [rsi+rcx]
+	cmp dl, 48
+	jl .end
+	cmp dl, 57
+	jg .end
 		sub dl, 48
 		add rax, rdx
 		cmp byte [rsi+rcx+1], 0
@@ -109,39 +107,6 @@ digits_sum:
 
 
 
-
-
-
-uninit:
-    xor rcx, rcx
-
-    mov rax, [number]
-    call digits_sum
-    mov [number], rbx
-
-    .iter1:
-      xor rdx, rdx
-      mov rcx, 10
-      mov rax, [number]
-        div rcx 
-	mov [number], rax
-      mov al, dl
-      add al, '0'
-      inc [len]
-      push rax
-      cmp [number], 0
-      jne .iter1
-
-    .iter2:
-      pop rax
-      call print_symbol
-      dec [len]
-      jne .iter2
-
-    mov al, 0xA
-    call print_symbol
-
-    jmp exit
 
 
 

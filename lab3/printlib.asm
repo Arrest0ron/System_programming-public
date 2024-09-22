@@ -35,31 +35,45 @@ print_newline:
 	pop rax
 	ret
 
-;rsi (string memory adress start) -> rax (number)	
+
+;rsi (string memory adress start) -> rax (number)
 stoi:
 	push rbx
 	push rcx
 	push rdx
+	push r8
 
+	mov r8, 1
 	xor rax, rax
 	xor rcx, rcx
+	cmp byte [rsi], 45
+	jne .loop
+	mov r8, -1
+	inc rcx
 	.loop:
-	xor rdx, rdx
-	mov byte dl, [rsi+rcx]
-	cmp dl, 48
-	jl .end
-	cmp dl, 57
-	jg .end
+		xor rdx, rdx
+		mov byte dl, [rsi+rcx]
+		cmp dl, 48
+		jl .sign
+		cmp dl, 57
+		jg .sign
+		
+		.p2:
 		sub dl, 48
 		add rax, rdx
 		cmp byte [rsi+rcx+1], 0
-		je .end
+		je .sign
 		mov rbx, 10
 		mul rbx
 		inc rcx
 	jmp .loop
-	.end:	
 
+	.sign:
+		cmp r8, 0
+		jg .end
+		neg rax
+	.end:	 
+	pop r8
 	pop rdx
 	pop rcx
 	pop rbx

@@ -22,9 +22,24 @@ itoa:
 	push rbx
 	push rcx
 	push rdx
+	
+
+
+
 	sub rsp, 32
 	mov rcx, 10
 	xor rbx, rbx
+	
+	cmp rax, 0
+	jg .loop
+	neg rax
+	push rax
+	mov al, '-'
+	call print_symbol
+	pop rax
+	inc rbx
+
+	
 	.loop:
 		xor rdx, rdx
 		div rcx
@@ -37,6 +52,7 @@ itoa:
 		je .end
 
 	.end:
+
 	mov byte [rsp+rbx], 0
 	mov rsi, rsp
 	call reverse_print

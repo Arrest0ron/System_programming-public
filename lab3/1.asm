@@ -2,24 +2,25 @@ format ELF64
 public _start
 
 section '.data' writable
-string db "my name is Gustavo Fring. But you can call me Gus.", 0xA, 0
-
+string db "my name is Gustavo Fring. But you can call me Gus.", 0
+number dq "12", 0 
+len db 0
 section '.code.' executable
 
 include 'printlib.asm'
 _start:
-	add rsp, 16
-	pop rsi
+
+	mov rsi, number
 	call stoi
-	.loop:	
-		cmp rax, 0
-		je .exit
-		dec rax
-		mov rsi, string
+
+	mov rcx, rax
+	.iter:
+		mov rsi, number
 		call print_str
-		jmp .loop
-	.exit:
-		call exit
+		call print_newline
+	loop .iter
+
+	call exit
 
 
 

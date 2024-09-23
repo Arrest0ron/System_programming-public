@@ -1,8 +1,9 @@
 #include <stdio.h>
-int main()
-{
-    int a, b, c; 
-    scanf("%d%d%d",&a,&b,&c); 
-    printf("%d\n", a+b+c);
+#include <stdlib.h> 
+
+int main(int argc, char* argv[]) {
+    int number = atoi(argv[1])+ atoi(argv[2]) + atoi(argv[3]); 
+    printf("%d\n", number); 
+
     return 0;
 }

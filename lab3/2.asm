@@ -16,12 +16,14 @@ _start:
 
 	pop rsi
 	call stoi
+	imul rax, 2
 	add [result], rax
 	pop rsi
 	call stoi
 	add [result], rax
 	pop rsi
 	call stoi
+	imul rax, 2
 	add [result], rax
 	mov rax, [result]
 	call itoa

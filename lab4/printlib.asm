@@ -1,6 +1,6 @@
 exit:
 	mov rax, 60
-	mov rsi, 0
+	mov rdi, 0
 	syscall
 
 ;rsi (string memory adress start) -> rdx (length of 0-terminated string)
@@ -17,10 +17,15 @@ print_str:
 	push rax
 	push rcx
 	push rdx
-	mov rax, 1
+	push rdi
+
 	;rsi is  already in place
 	call get_len
+	mov rax, 1
+	mov rdi, 1
 	syscall
+
+	pop rdi
 	pop rdx
 	pop rcx
 	pop rax
@@ -86,34 +91,113 @@ print_symbol:
 	push rax
 	push rsi
 	push rdx
+	push rdi
+
 	dec rsp
 	mov [rsp], al
 	mov rsi, rsp
 	mov rdx, 1
 	mov rax, 1
-
+	mov rdi, 1
   	syscall
 	inc rsp
+
+	pop rdi
 	pop rdx
 	pop rsi
 	pop rax
 	pop rcx
   	ret
 
-; num rax -> sum of its digits in the rbx
-digits_sum:	
+
+;The function realizates user input from the keyboard
+;input: rsi - place of memory saved input string 
+input_keyboard:
+  push rax
+  push rdi
+  push rdx
+
+  mov rax, 0
+  mov rdi, 0
+  mov rdx, 255
+  syscall
+
+  xor rcx, rcx
+  .loop:
+     mov al, [rsi+rcx]
+     inc rcx
+     cmp rax, 0x0A
+     jne .loop
+  dec rcx
+  mov byte [rsi+rcx], 0
+  
+  pop rdx
+  pop rdi
+  pop rax
+  ret
+
+
+;rsi (string memory adress start) -> stdout (in reverse)
+reverse_print:
 	push rax
+	push rdx
+	call get_len
+    	.iter:
+		mov al, [rsi+rdx]
+		call print_symbol
+		dec rdx
+		cmp rdx, -1
+		jne .iter
+	call print_newline
+	pop rdx
+	pop rax
+	ret
+
+;rax int -> rsi string
+;results can be rewritten by push, use carefully
+itoa:
+	push rax
+	push rbx
 	push rcx
 	push rdx
+	
+
+
+
+	sub rsp, 32
 	mov rcx, 10
-	.iter:
+	xor rbx, rbx
+	
+	cmp rax, 0
+	jg .loop
+	neg rax
+	push rax
+	mov al, '-'
+	call print_symbol
+	pop rax
+	inc rbx
+
+	
+	.loop:
 		xor rdx, rdx
 		div rcx
-		add rbx, rdx
+		add dl, '0'
+		mov byte [rsp+rbx], dl
+		inc rbx
 		cmp rax, 0
-		jne .iter
+	        jne .loop
+		cmp rbx, 31
+		je .end
 
+	.end:
+
+	mov byte [rsp+rbx], 0
+	mov rsi, rsp
+	call reverse_print
+	add rsp, 32
+	
 	pop rdx
 	pop rcx
+	pop rbx
 	pop rax
 	ret

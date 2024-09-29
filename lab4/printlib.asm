@@ -40,50 +40,6 @@ print_newline:
 	ret
 
 
-;rsi (string memory adress start) -> rax (number)
-stoi:
-	push rbx
-	push rcx
-	push rdx
-	push r8
-
-	mov r8, 1
-	xor rax, rax
-	xor rcx, rcx
-	cmp byte [rsi], 45
-	jne .loop
-	mov r8, -1
-	inc rcx
-	.loop:
-		xor rdx, rdx
-		mov byte dl, [rsi+rcx]
-		cmp dl, 48
-		jl .sign
-		cmp dl, 57
-		jg .sign
-		
-		.p2:
-		sub dl, 48
-		add rax, rdx
-		cmp byte [rsi+rcx+1], 0
-		je .sign
-		mov rbx, 10
-		mul rbx
-		inc rcx
-	jmp .loop
-
-	.sign:
-		cmp r8, 0
-		jg .end
-		neg rax
-	.end:	 
-	pop r8
-	pop rdx
-	pop rcx
-	pop rbx
-	ret
-
-
 	
 ; al ->  stdout
 print_symbol:
@@ -137,67 +93,68 @@ input_keyboard:
   ret
 
 
-;rsi (string memory adress start) -> stdout (in reverse)
-reverse_print:
-	push rax
-	push rdx
-	call get_len
-    	.iter:
-		mov al, [rsi+rdx]
-		call print_symbol
-		dec rdx
-		cmp rdx, -1
-		jne .iter
-	call print_newline
-	pop rdx
-	pop rax
-	ret
+;Function converting the string to the number
+;input rsi - place of memory of begin string
+;output rax - the number from the string
+str_number:
+    push rcx
+    push rbx
 
-;rax int -> rsi string
-;results can be rewritten by push, use carefully
-itoa:
-	push rax
-	push rbx
-	push rcx
-	push rdx
-	
+    xor rax,rax
+    xor rcx,rcx
+.loop:
+    xor     rbx, rbx
+    mov     bl, byte [rsi+rcx]
+    cmp     bl, 48
+    jl      .finished
+    cmp     bl, 57
+    jg      .finished
 
+    sub     bl, 48
+    add     rax, rbx
+    mov     rbx, 10
+    mul     rbx
+    inc     rcx
+    jmp     .loop
 
+.finished:
+    cmp     rcx, 0
+    je      .restore
+    mov     rbx, 10
+    div     rbx
 
-	sub rsp, 32
-	mov rcx, 10
-	xor rbx, rbx
-	
-	cmp rax, 0
-	jg .loop
-	neg rax
-	push rax
-	mov al, '-'
-	call print_symbol
-	pop rax
-	inc rbx
+.restore:
+    pop rbx
+    pop rcx
+    ret
 
-	
-	.loop:
-		xor rdx, rdx
-		div rcx
-		add dl, '0'
-		mov byte [rsp+rbx], dl
-		inc rbx
-		cmp rax, 0
-	        jne .loop
-		cmp rbx, 31
-		je .end
-
-	.end:
-
-	mov byte [rsp+rbx], 0
-	mov rsi, rsp
-	call reverse_print
-	add rsp, 32
-	
-	pop rdx
-	pop rcx
-	pop rbx
-	pop rax
-	ret
+;The function converts the number to string
+;input rax - number
+;output rsi - string beginning adress
+number_str:
+  push rbx
+  push rcx
+  push rdx
+  xor rcx, rcx
+  mov rbx, 10
+  .loop_1:
+    xor rdx, rdx
+    div rbx
+    add rdx, 48
+    push rdx
+    inc rcx
+    cmp rax, 0
+    jne .loop_1
+  xor rdx, rdx
+  .loop_2:
+    pop rax
+    mov byte [rsi+rdx], al
+    inc rdx
+    dec rcx
+    cmp rcx, 0
+  jne .loop_2
+  mov byte [rsi+rdx], 0   
+  pop rdx
+  pop rcx
+  pop rbx
+  ret

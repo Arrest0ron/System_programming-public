@@ -18,6 +18,7 @@ print_str:
 	push rcx
 	push rdx
 	push rdi
+	push rsi
 
 	;rsi is  already in place
 	call get_len
@@ -25,6 +26,7 @@ print_str:
 	mov rdi, 1
 	syscall
 
+	pop rsi
 	pop rdi
 	pop rdx
 	pop rcx
@@ -69,6 +71,7 @@ print_symbol:
 ;The function realizates user input from the keyboard
 ;input: rsi - place of memory saved input string 
 input_keyboard:
+	push rcx
   push rax
   push rdi
   push rdx
@@ -90,6 +93,7 @@ input_keyboard:
   pop rdx
   pop rdi
   pop rax
+	pop rcx
   ret
 
 
@@ -129,9 +133,10 @@ str_number:
     ret
 
 ;The function converts the number to string
-;input rax - number
+;input rax - number, rsi - string beginning adress for result
 ;output rsi - string beginning adress
 number_str:
+	push rax
   push rbx
   push rcx
   push rdx
@@ -157,4 +162,5 @@ number_str:
   pop rdx
   pop rcx
   pop rbx
+  pop rax
   ret

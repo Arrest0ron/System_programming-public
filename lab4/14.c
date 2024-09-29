@@ -1,9 +1,9 @@
 // 14.c
 #include <stdio.h>
 
-int end_test(int n)
+int end_test(long long n)
 {
-    int square = n * n;
+    long long square = n * n;
     while (n)
     {
         if (square%10 == n%10)
@@ -22,7 +22,7 @@ int main(int argc, char* argv)
 {
     int n;
     scanf("%d", &n);
-    for (int i = 1; i <= n; i++)
+    for (long long i = 1; i <= n; i++)
         if (end_test(i))
         {
             printf("%d\n", i);

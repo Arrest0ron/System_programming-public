@@ -1,3 +1,4 @@
+;5.asm
 format ELF64
 
 public _start
@@ -55,7 +56,7 @@ is_divisible_by_11_or_5:
 	je .true
 
 	.false:
-		mov rdi, 0
+		xor rdi, rdi
 		jmp .end
 	.true:
 		mov rdi, 1

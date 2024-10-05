@@ -1,4 +1,4 @@
-
+;14.asm
 format ELF64
 
 public _start
@@ -41,13 +41,8 @@ _start:
             cmp rax, 0
             je .end
             jmp .iter1
-        
-
-
     .end:
     call exit
-
-
 
 ; rdx  -> rax = 10^rdx
 power10:

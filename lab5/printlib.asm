@@ -1,3 +1,8 @@
+section '.data'
+
+err_msg db "Something unexpected happened", 0xA, 0 
+
+section '.code' executable 
 exit:
 	mov rax, 60
 	mov rdi, 0
@@ -48,6 +53,11 @@ print_symbol:
 	push rcx
 	push rax
 	push rsi
+   ;;Системный вызов close
+   mov rdi, rax
+   mov rax, 3
+   syscall
+   
 	push rdx
 	push rdi
 
@@ -72,27 +82,27 @@ print_symbol:
 ;input: rsi - place of memory saved input string 
 input_keyboard:
 	push rcx
-  push rax
-  push rdi
-  push rdx
+  	push rax
+  	push rdi
+  	push rdx
 
-  mov rax, 0
-  mov rdi, 0
-  mov rdx, 255
-  syscall
+  	mov rax, 0
+  	mov rdi, 0
+  	mov rdx, 255
+  	syscall
 
-  xor rcx, rcx
-  .loop:
-     mov al, [rsi+rcx]
-     inc rcx
-     cmp rax, 0x0A
-     jne .loop
-  dec rcx
-  mov byte [rsi+rcx], 0
+  	xor rcx, rcx
+  	.loop:
+     		mov al, [rsi+rcx]
+     		inc rcx
+     		cmp rax, 0x0A
+     		jne .loop
+  	dec rcx
+  	mov byte [rsi+rcx], 0
   
-  pop rdx
-  pop rdi
-  pop rax
+  	pop rdx
+  	pop rdi
+  	pop rax
 	pop rcx
   ret
 
@@ -164,3 +174,109 @@ number_str:
   pop rbx
   pop rax
   ret
+
+
+
+
+;rdi file descriptor -> file closed
+close:  
+	push rdi
+	push rax
+	push rcx
+
+  	mov rax, 3
+  	syscall
+   	cmp rax, 0 
+   	jl err_out
+
+	pop rcx
+	pop rax
+	pop rdi
+	ret
+
+; rsi - flags e.g. 1101o
+; rdx - permissions e.g. 777o 
+; rdi - filename adress -> r12 file descriptor
+open:	
+	push rcx
+	push rax
+	push rdi
+	push rsi
+
+	mov rax, 2
+   	mov rdx, 777o 
+   	syscall
+   	cmp rax, 0 
+	jl err_out 
+   	mov r12, rax 
+
+	pop rsi
+	pop rdi
+	pop rax
+	pop rcx
+	ret
+
+	
+err_out:
+	mov rsi, err_msg
+	call print_str
+	call exit
+
+
+;The function defines the prime number
+;input rax - the number
+;output rdi - 1 - prime number, 0 - composite number
+is_prime:
+	
+  push rax
+  push rbx
+  push rcx
+  push rdx
+
+  cmp rax, 2
+  je .a1
+  
+  mov rbx, 2
+  mov rdi, rax
+  xor rdx, rdx
+  div rbx
+  mov rcx, rax
+
+  .loop:
+    mov rax, rdi
+    xor rdx, rdx
+    div rbx
+    inc rbx
+    cmp rdx, 0
+    je .a2
+    cmp rcx, rbx
+    jge .loop
+  .a1:
+    mov rdi, 1
+    jmp .a3
+  .a2:
+    mov rdi, 0
+    jmp .a3
+  .a3:
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret
+
+;rdi - file descriptor, rsi - input -> file
+;
+write:
+	push rdx
+	push rcx
+	push rdi
+	push rsi
+	mov rax, 1
+	call get_len
+	;rsi, rdi already in place
+	syscall
+	pop rsi
+	pop rdi
+	pop rcx
+	pop rdx
+	ret

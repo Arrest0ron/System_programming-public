@@ -1,6 +1,7 @@
 section '.data'
 
 err_msg db "Something unexpected happened", 0xA, 0 
+args_msg db "Not enough arguments", 0xA, 0 
 
 section '.code' executable 
 exit:
@@ -107,6 +108,7 @@ input_keyboard:
 ;input rsi - place of memory of begin string
 ;output rax - the number from the string
 str_number:
+	push rsi
     push rcx
     push rbx
 
@@ -136,18 +138,17 @@ str_number:
 .restore:
     pop rbx
     pop rcx
+	pop rsi
     ret
 
 ;The function converts the number to string
 ;input rax - number, rsi - string beginning adress for result
 ;output rsi - string beginning adress
 number_str:
-	push rdi
 	push rax
-  	push rbx
-  	push rcx
-  	push rdx
-	
+  push rbx
+  push rcx
+  push rdx
   xor rcx, rcx
   mov rbx, 10
   .loop_1:
@@ -166,17 +167,12 @@ number_str:
     dec rcx
     cmp rcx, 0
   jne .loop_2
-  mov byte [rsi+rdx], 0  
-
-  	pop rdx
-  	pop rcx
-  	pop rbx
-  	pop rax
-	pop rdi
+  mov byte [rsi+rdx], 0   
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
   ret
-
-
-
 
 ;rdi file descriptor -> file closed
 close:  
@@ -221,6 +217,12 @@ err_out:
 	mov rsi, err_msg
 	call print_str
 	call exit
+
+args_out:
+	mov rsi, args_msg
+	call print_str
+	call exit
+
 
 
 ;The function defines the prime number

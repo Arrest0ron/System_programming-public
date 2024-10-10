@@ -1,10 +1,7 @@
 format elf64
 public _start
-public close
-public open
-public err_out
 public is_prime
-public write
+
 
 include 'printlib.asm'
 section '.bss' writable
@@ -21,10 +18,13 @@ section '.text' executable
 _start:
 	mov rsi, filename_1
 	call input_keyboard 
+
 	mov rsi, filename_2
 	call input_keyboard
+
 	mov rsi, buf64
 	call input_keyboard
+
 	call str_number
 	cmp rax, 1
 	jl .end
@@ -33,7 +33,7 @@ _start:
 	mov rsi, 1101o
 	mov rdx, 777o
 
-	mov rdi, 0 
+	mov rdi, filename_2 
 	call open
 	mov r13, r12
 

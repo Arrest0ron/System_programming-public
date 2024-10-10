@@ -53,10 +53,6 @@ print_symbol:
 	push rcx
 	push rax
 	push rsi
-   ;;Системный вызов close
-   mov rdi, rax
-   mov rax, 3
-   syscall
    
 	push rdx
 	push rdi
@@ -146,10 +142,12 @@ str_number:
 ;input rax - number, rsi - string beginning adress for result
 ;output rsi - string beginning adress
 number_str:
+	push rdi
 	push rax
-  push rbx
-  push rcx
-  push rdx
+  	push rbx
+  	push rcx
+  	push rdx
+	
   xor rcx, rcx
   mov rbx, 10
   .loop_1:
@@ -168,11 +166,13 @@ number_str:
     dec rcx
     cmp rcx, 0
   jne .loop_2
-  mov byte [rsi+rdx], 0   
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  mov byte [rsi+rdx], 0  
+
+  	pop rdx
+  	pop rcx
+  	pop rbx
+  	pop rax
+	pop rdi
   ret
 
 

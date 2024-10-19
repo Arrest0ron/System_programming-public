@@ -144,43 +144,31 @@ str_number:
 ;input rax - number, rsi - string beginning adress for result
 ;output rsi - string beginning adress
 number_str:
-push rbx
-	push rcx
-	push rdx
-	push r8
-
-	mov r8, 1
-	xor rax, rax
-	xor rcx, rcx
-	cmp byte [rsi], 45
-	jne .loop
-	mov r8, -1
-	inc rcx
-	.loop:
-		xor rdx, rdx
-		mov byte dl, [rsi+rcx]
-		cmp dl, 48
-		jl .sign
-		cmp dl, 57
-		jg .sign
-		
-		.p2:
-		sub dl, 48
-		add rax, rdx
-		cmp byte [rsi+rcx+1], 0
-		je .sign
-		mov rbx, 10
-		mul rbx
-		inc rcx
-	jmp .loop
-
-	.sign:
-		cmp r8, 0
-		jg .end
-		neg rax
-	.end:	 
-	pop r8
-	pop rdx
-	pop rcx
-	pop rbx
-	ret
+	push rax
+  push rbx
+  push rcx
+  push rdx
+  xor rcx, rcx
+  mov rbx, 10
+  .loop_1:
+    xor rdx, rdx
+    div rbx
+    add rdx, 48
+    push rdx
+    inc rcx
+    cmp rax, 0
+    jne .loop_1
+  xor rdx, rdx
+  .loop_2:
+    pop rax
+    mov byte [rsi+rdx], al
+    inc rdx
+    dec rcx
+    cmp rcx, 0
+  jne .loop_2
+  mov byte [rsi+rdx], 0   
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  ret

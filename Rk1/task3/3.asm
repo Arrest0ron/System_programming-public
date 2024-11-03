@@ -17,18 +17,23 @@ section '.text' executable
 
 
 _start:
+	pop rsi
+	pop rsi
+	xor rsi, rsi
+
+
+
+	pop rsi
+	mov rdi, string1
+	call strcpy
+	mov rbx, rsi
+
 	mov  rsi, string2
-	call input_keyboard
+	pop rsi
 	call str_number
 	mov [N], rax
 
-
-	mov rsi, string3
-	call input_keyboard
-	call print_newline
-	mov rdi, string1
-	call strcpy
-
+	mov rsi, rbx
 
 
 	xor rbx, rbx
@@ -69,9 +74,6 @@ _start:
 		inc rbx
 		cmp rbx, [N]
 		jl .iter
-
-	
-
 
 
 ; ;системный вызов exit

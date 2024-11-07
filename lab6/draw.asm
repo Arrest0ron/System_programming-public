@@ -25,12 +25,9 @@ public _start
 	extrn cbreak
 	extrn timeout
 	extrn mydelay
-	extrn setrnd
-	extrn get_random
-
 
 	section '.bss' writable
-	
+
 	xmax dq 1
 	counstX dq 1
 	ymax dq 1
@@ -49,7 +46,7 @@ public _start
 	digit db '0123456789'
 
 	section '.text' executable
-	
+
 _start:
 
 	;; Инициализация
@@ -84,7 +81,6 @@ _start:
 	call refresh
 	call noecho
 	call cbreak
-	call setrnd
 
 	;; Начальная инициализация палитры
 	mov rax, ' '
@@ -92,13 +88,12 @@ _start:
 	mov [palette], rax
 	mov [count], 0
 	mov [current_move],0
-	
-        
+
+
 	;; Главный цикл программы
 mloop:
-    ;; Выбираем случайную позицию по осям x, y
 
-	
+
 	mov rcx, [ymax]
 
 	add rcx, 5
@@ -141,12 +136,12 @@ mloop:
 	mov [xmax], rcx
 	mov [current_move], 0
 	mov [rand_x],0
-	mov [rand_y],0 
+	mov [rand_y],0
 	call change_color
 	.p2:
 
 
-	cmp [current_move],0 
+	cmp [current_move],0
 	je .M0
 	cmp [current_move],1
 	je .M1
@@ -203,13 +198,13 @@ mloop:
 		jmp .decision
 
 	.decision:
-	;; Перемещаем курсор в случайную позицию
+	;; Перемещаем курсор
 	mov rdi, [rand_y]
 	mov rsi, [rand_x]
 
 	call move
 
-	;; Печатаем случайный символ в палитре
+	;; Печатаем
 	mov rax, [palette]
 	and rax, 0x100
 	cmp rax, 0x100
@@ -226,22 +221,20 @@ mloop:
 	mov  rdi,[palette]
 	call addch
 	;; 	call insch
-	
+
 	;; Задержка
 	mov rdi,[delay]
 	call mydelay
 
-	;; Обновляем экран и количество выведенных знакомест в заданной палитре
+	;; Обновляем экран 
 	call refresh
-	mov r8, [count]
-	inc r8
-	mov [count], r8
-    
+
+
     ;;Задаем таймаут для getch
 	mov rdi, 2
 	call timeout
 	call getch
-    
+
     ;;Анализируем нажатую клавишу
 	cmp rax, 'c'
 	je next
@@ -259,13 +252,13 @@ mloop:
 	mov [delay], rax
 
 	jmp mloop
-next:	
+next:
 	call endwin
 	call exit
 
-change_color:	
+change_color:
 	mov r8,[palette]
-	and r8, 0x100 
+	and r8, 0x100
 	cmp r8, 0x100
 	je .pp
 	mov rax, ' '

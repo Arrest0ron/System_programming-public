@@ -14,6 +14,7 @@ _start:
     xor rax, rax
     call input_keyboard
     call str_number
+	
 
     .iter1:
         mov rdi, rax

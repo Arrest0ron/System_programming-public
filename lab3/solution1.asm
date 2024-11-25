@@ -23,9 +23,6 @@ itoa:
 	push rcx
 	push rdx
 	
-
-
-
 	sub rsp, 32
 	mov rcx, 10
 	xor rbx, rbx
@@ -48,8 +45,6 @@ itoa:
 		inc rbx
 		cmp rax, 0
 	        jne .loop
-		cmp rbx, 31
-		je .end
 
 	.end:
 
@@ -57,6 +52,7 @@ itoa:
 	mov rsi, rsp
 	call reverse_print
 	add rsp, 32
+
 	pop rdx
 	pop rcx
 	pop rbx

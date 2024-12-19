@@ -56,8 +56,6 @@ _start:
 
 	;; Инициализация
 	call initscr
-	call exit
-
 	;; Размеры экрана
 	xor rdi, rdi
 	mov rdi, [stdscr]

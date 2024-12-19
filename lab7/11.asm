@@ -18,15 +18,14 @@ section '.text' executable
 _start:
 	mov rsi, filename_1
 	call input_keyboard 
-	call print_str
+
 
 	mov rsi, filename_2
 	call input_keyboard
-	call print_str
+
 
 	mov rsi, buf64
 	call input_keyboard
-	call print_str
 
 	call str_number
 	cmp rax, 1

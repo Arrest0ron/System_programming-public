@@ -30,31 +30,34 @@ section '.text' executable
 
 _start:
 	pop rcx
-	; cmp rcx, 5
-	; jl .noargs
+	cmp rcx, 5
+	jl .noargs
 
 	pop rsi
 	xor rsi, rsi
 
 	pop rsi          ; K
 	call print_str
+	
 	call str_number
 	
 	mov [K], rax
 
 	pop rsi          ; M
-	call print_str
+call print_str
+	
 	call str_number
 	mov [M], rax
 
 	pop rsi          ; F1
-	call print_str
+call print_str
+	
 	mov [filename_1], rsi
 	pop rsi          ; F2
-	call print_str
-	mov [filename_2], rsi
-	call exit
+call print_str
 	
+	mov [filename_2], rsi
+
 	
 
 	mov rdi, [filename_2]
@@ -65,31 +68,6 @@ _start:
 	cmp rax, 0 
   	jl .err
   	mov r10, rax ; r10 = F1 descryptor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	mov rdi, [filename_1]
 	call file_len ; getting FILE_LENGTH to r9
@@ -103,7 +81,7 @@ _start:
   	mov rdx, 777o
 	syscall ; opening F1
 	cmp rax, 0 
-  	jl .err
+  	; jl .err
   	mov r8, rax ; r8 = F1 descryptor
 
 	
@@ -205,6 +183,10 @@ _start:
 	.err:
 	call err_out
 	.noargs:
+	mov rax, rcx
+	mov rsi, buf64
+	call number_str
+	call print_str
 	call args_out
 	.K_LOW:
 	mov rsi, K_LOW_ERR

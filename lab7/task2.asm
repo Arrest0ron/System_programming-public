@@ -1,206 +1,276 @@
-format ELF64
 
-include '/workspaces/System_programming/Lab_5/func.asm'
 
+;;ipc1.asm
+	
+format elf64
 public _start
+include 'func.asm'
 
-arrlen = 621
-flags = 2147585792
-
+section '.data' writable
+  randomfile db "/dev/random", 0
+   msg_1 db "First process",0
+   msg_2 db "Second process",0
+   msg_3 db "Third process",0
+   N dq 629
+   BYTE_SIZE dq 0
+  num_1 dw 0
+  num_2 dw 0
+  num_3 dw 0
+	num_4 dw 0
+	
 section '.bss' writable
-array rb arrlen
-buffer rb 10
-stack1 rq 4096
-f db "/dev/random", 0
-    
+	
+	buffer rb 100
+	address rq 1
+  number rw 1
+
 section '.text' executable
+	
 _start:
-mov rax, 2
-mov rdi, f
-mov rsi, 0o
-syscall
-mov r8, rax
-mov rax, 0
-mov rdi, r8
-mov rsi, array
-mov rdx, arrlen
-syscall
-mov rax, 3
-mov rdi, r8
-syscall
-call sort
+    mov rsi, msg_1
+    call print_str
+    call new_line
 
-mov rax, 56
-mov rdi, flags
-mov rsi, 4096
-add rsi, stack1
-syscall
+    mov rax, [N]
+    mov rbx, 2
+    mul rbx
+    mov [BYTE_SIZE], rax
+    mov rsi, buffer
 
-cmp rax, 0
-je .primes
+    ;;Первый процесс создает разделяемую память
+    mov rdi, 0    ;начальный адрес выберет сама ОС
+    mov rsi, [BYTE_SIZE]  ;задаем размер области памяти
+    mov rdx, 0x3  ;совмещаем флаги PROT_READ | PROT_WRITE
+    mov r10, 0x21  ;задаем режим MAP_ANONYMOUS|MAP_SHARED
+    mov r8, -1   ;указываем файловый дескриптор null
+    mov r9, 0     ;задаем нулевое смещение
+    mov rax, 9    ;номер системного вызова mmap
+    syscall
+
+    ;;Сохраняем и печатаем адрес памяти
+    mov [address], rax
+    ; mov rsi, buffer
+
+     mov rdi, randomfile
+   mov rax, 2 
+   mov rsi, 0o
+   syscall 
+   mov r8, rax
+    call filler
+
+    ;;Делаем fork процесса
     
-mov rax, 61
-mov rdi, -1
-mov rdx, 0
-mov r10, 0
-syscall
+    mov rax, 57
+    syscall
+    cmp rax, 0
+    je fork_process1
 
-call input_keyboard
+    mov rax, 57
+    syscall
+    cmp rax, 0
+    je fork_process2
 
-mov rax, 56
-mov rdi, flags
-mov rsi, 4096
-add rsi, stack1
-syscall
-
-cmp rax, 0
-je .quantile
+    mov rax, 57
+    syscall
+    cmp rax, 0
+    je third
     
-mov rax, 61
-mov rdi, -1
-mov rdx, 0
-mov r10, 0
-syscall
+    ;; выполняем системный вызов munmap, освобождая память
+    mov rdi, [address]
+    mov rsi, 1
+    mov rax, 11
+    syscall
+    call exit
+  
 
-call input_keyboard
+  fork_process1:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    xor rcx, rcx
+    mov rsi, buffer
+    xor r8, r8
+    .mloop:
+      push rcx
+      xor rbx, rbx
+      xor rax, rax
+      mov rbx, [address+rcx*2]
+      mov ax, bx
+      xor rdx, rdx
+      mov rbx, 3
+      div rbx
+      cmp rdx, 0
+      jne .end
+      inc r8
 
-mov rax, 56
-mov rdi, flags
-mov rsi, 4096
-add rsi, stack1
-syscall
+      .end:
+      pop rcx
+      inc rcx
+      cmp rcx, [N]
+      jl .mloop
+    mov rax, r8
+    call number_str
+    call print_str
+    call new_line
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    call exit
 
-cmp rax, 0
-je .median
-    
-mov rax, 61
-mov rdi, -1
-mov rdx, 0
-mov r10, 0
-syscall
+  fork_process2:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    xor rcx, rcx
+    mov rsi, buffer
+    xor r8, r8
+    .mloop:
+      push rcx
+      xor rbx, rbx
+      xor rax, rax
+      mov rbx, [address+rcx*2]
+      mov ax, bx
+      xor rdx, rdx
+      mov rbx, 5
+      div rbx
+      cmp rdx, 0
+      jne .end
+      inc r8
 
-call input_keyboard
+      .end:
+      pop rcx
+      inc rcx
+      cmp rcx, [N]
+      jl .mloop
+    mov rax, r8
+    call number_str
+    call print_str
+    call new_line
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    call exit
 
-mov rax, 56
-mov rdi, flags
-mov rsi, 4096
-add rsi, stack1
-syscall
+third:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  xor rcx, rcx
+  mov rsi, buffer
+  .mloop:
+    push rcx
+    xor rbx, rbx
+    xor rax, rax
+    mov rbx, [address+rcx*2]
+    mov ax, bx
+    cmp ax, [num_1]
+    jl .ch2
 
-cmp rax, 0
-je .fifth
-    
-mov rax, 61
-mov rdi, -1
-mov rdx, 0
-mov r10, 0
-syscall
+    mov bx, [num_1]
+    mov cx, [num_2]
+    mov dx, [num_3]
+    mov [num_1], ax
+    mov [num_2], bx
+    mov [num_3], cx
+    mov [num_4], dx
+    jmp .end
+    .ch2:
 
-call exit
+    cmp ax, [num_2]
+    jl .ch3
+    mov bx, [num_2]
+    mov cx, [num_3]
+    mov [num_2], ax
+    mov [num_3], bx
+    mov [num_4], cx
+    jmp .end
+    .ch3:
 
-.fifth:
-xor rax, rax
-mov al, [array+5]
-mov rsi, buffer
-call number_str
-call print_str
-call new_line
-call exit
+    cmp ax, [num_3]
+    jl .ch4
+    mov bx, [num_3]
+    mov [num_3], ax
+    mov [num_4], bx
+    jmp .end
+    .ch4:
 
-.median:
-mov rax, arrlen
-mov rbx, 2
-div rbx
-mov bl, [array+rax]
-mov rax, rbx
-mov rsi, buffer
-call number_str
-call print_str
-call new_line
-call exit
+    cmp ax, [num_4]
+    jl .end
+    mov [num_4], ax
 
-.primes:
-xor r8, r8
-mov r9, array
-add r9, arrlen
-mov rsi, array
-xor rbx, rbx
+    .end:
+    pop rcx
+    inc rcx
+    cmp rcx, [N]
+    jl .mloop
+    xor rax, rax
+    mov ax, [num_4]
+    call new_line
+    call number_str
+    call print_str
+    call new_line
+    call new_line
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  call exit
 
-.count:
-cmp rsi, r9
-jnl .next
-mov bl, [rsi]
-cmp bl, 1
-je .not_prime
-mov rcx, 2
+filler:
+  push rax
+  push rbx 
+  push rcx 
+  push rsi 
+    xor rcx, rcx
+    .mloop:
+    mov rsi, buffer
+    push rcx
+      mov rax, 0 ;
+      mov rdi, r8
+      mov rsi, number
+      mov rdx, 2
+      syscall
+      pop rcx
+      mov bx, [number]
+      mov WORD [address+rcx], bx
+      add rcx, 2
+      cmp rcx, [BYTE_SIZE]
+      jl .mloop
 
-.prime_check:
-cmp rcx, rbx
-je .is_prime
-mov rax, rbx
-xor rdx, rdx
-div rcx
-cmp rdx, 0
-je .not_prime
-inc rcx
-jmp .prime_check
-            
-.is_prime:
-inc r8
+  pop rsi
+  pop rcx
+  pop rbx
+  pop rax
+  ret
 
-.not_prime:
-inc rsi
-jmp .count
-        
-.next:
-mov rax, r8
-mov rsi, buffer
-call number_str
-call print_str
-call new_line
-call exit
+; rdi array ptr, rax = N
+printer:
+  push rax
+  push rbx 
+  push rcx 
+  push rsi 
+    xor rcx, rcx
+    mov rsi, buffer
+    .mloop:
 
-.quantile:
-mov rax, arrlen
-mov rbx, 4
-div rbx
-mov rbx, arrlen-1
-sub rbx, rax
-xor rax, rax
-mov al, [array+rbx]
-mov rsi, buffer
-call number_str
-call print_str
-call new_line
-call exit
+      xor rbx, rbx
+      xor rax, rax
+      mov rbx, [address+rcx*2]
+      movzx rax, bx
+      call number_str
+      call print_str
+      call new_line
 
-sort:
-xor r11, r11
-
-.sel_loop:
-mov r12, r11
-mov r10, r11
-inc r10
-
-.inner_loop:
-xor rax, rax
-mov al, [array+r12]
-cmp [array+r10], al
-jae .cont
-mov r12, r10
-.cont:
-inc r10
-cmp r10, arrlen
-jl .inner_loop
-
-xor rax, rax
-xor rbx, rbx
-mov bl, [array+r11]
-mov al, [array+r12]
-mov [array+r11], al
-mov [array+r12], bl
-inc r11
-cmp r11, arrlen-1
-jl .sel_loop
-
-ret
+      inc rcx
+      cmp rcx, [N]
+      jl .mloop
+  pop rsi
+  pop rcx
+  pop rbx
+  pop rax
+  ret

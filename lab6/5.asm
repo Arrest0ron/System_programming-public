@@ -37,20 +37,24 @@ _start:
 	xor rsi, rsi
 
 	pop rsi          ; K
+	call print_str
 	call str_number
 	
 	mov [K], rax
 
 	pop rsi          ; M
+	call print_str
 	call str_number
 	mov [M], rax
 
 	pop rsi          ; F1
-
+	call print_str
 	mov [filename_1], rsi
 	pop rsi          ; F2
+	call print_str
 	mov [filename_2], rsi
-
+	call exit
+	
 	
 
 	mov rdi, [filename_2]
@@ -61,6 +65,31 @@ _start:
 	cmp rax, 0 
   	jl .err
   	mov r10, rax ; r10 = F1 descryptor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	mov rdi, [filename_1]
 	call file_len ; getting FILE_LENGTH to r9

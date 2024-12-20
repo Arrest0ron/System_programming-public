@@ -25,6 +25,8 @@ public _start
 	extrn cbreak
 	extrn timeout
 	extrn mydelay
+	extrn sin
+	extrn get_cords
 
 	section '.bss' writable
 
@@ -38,7 +40,7 @@ public _start
 	section '.data' writable
 	delay dq 52500
 	rand_x dq 0
-	rand_y dq 0
+	rand_y dq 5
 	xmin dq 2
 	ymin  dq 2
 	current_move dq 0
@@ -94,108 +96,25 @@ _start:
 mloop:
 
 
-	mov rcx, [ymax]
-
-	add rcx, 5
-
-	cmp [ymin], rcx
-	je .check2
-	dec rcx
-		cmp [ymin], rcx
-	je .check2
-	dec rcx
-		cmp [ymin], rcx
-	jne .p2
-
-	.check2:
-	mov rcx, [xmax]
-	cmp [xmin], rcx
-	je .p3
-
-	dec rcx
-
-	cmp [xmin], rcx
-	je .p3
-
-	dec rcx
-
-	cmp [xmin], rcx
-	je .p3
-
-	dec rcx
-
-	cmp [xmin], rcx
-	je .p3
-
-	.p3:
-	mov [ymin], 2
-	mov rcx, [counstY]
-	mov [ymax], rcx
-	mov [xmin], 2
-	mov rcx, [counstX]
-	mov [xmax], rcx
-	mov [current_move], 0
-	mov [rand_x],0
-	mov [rand_y],0
-	call change_color
-	.p2:
 
 
-	cmp [current_move],0
-	je .M0
-	cmp [current_move],1
-	je .M1
-	cmp [current_move],2
-	je .M2
-	cmp [current_move],3
-	je .M3
-	; jmp next
-
-	.M0:
-		mov rcx, [ymax]
-		cmp [rand_y], rcx
-		jne .M0A
-		mov [current_move], 1
-		dec [ymax]
-		dec [ymax]
-		jmp .decision
-		.M0A:
-		inc [rand_y]
-		jmp .decision
 
 	.M1:
 		mov rcx, [xmax]
 		cmp [rand_x], rcx
 		jne .M1A
-		mov [current_move], 2
-		dec [xmax]
-		dec [xmax]
+		mov [rand_x], 0
+		mov [rand_y], 5
+		call change_color
 		jmp .decision
 		.M1A:
 		inc [rand_x]
+		mov rdi, [rand_x]
+		call get_cords
+
+		add [rand_y], rax
 		jmp .decision
-	.M2:
-		mov rcx, [ymin]q
-		cmp [rand_y], rcx
-		jne .M2A
-		mov [current_move], 3
-		inc [ymin]
-		inc [ymin]
-		jmp .decision
-		.M2A:
-		dec [rand_y]
-		jmp .decision
-	.M3:
-		mov rcx, [xmin]
-		cmp [rand_x], rcx
-		jne .M3A
-		mov [current_move], 0
-		inc [xmin]
-		inc [xmin]
-		jmp .decision
-		.M3A:
-		dec [rand_x]
-		jmp .decision
+
 
 	.decision:
 	;; Перемещаем курсор

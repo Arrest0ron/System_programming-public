@@ -12,7 +12,12 @@ section '.data' writable
    msg_2 db "Третье после максимального: ",0
    msg_3 db "Количество чисел, сумма цифр которых кратна 3: ",0
    msg_4 db "Самая редкая цифра: ", 0
-   N dq 600
+   me1 db "first_class", 0xA, 0
+   me2 db "second_class", 0xA, 0
+   me3 db "third_class", 0xA, 0
+   spac db "    ", 0
+   me4 db "fourth_class",0xA,  0
+   N dq 6
    BYTE_SIZE dq 0
   num_1 dw 0
   num_2 dw 0
@@ -96,7 +101,7 @@ _start:
     syscall
     cmp rax, 0
     je rarest_digit
-    ;; выполняем системный вызов munmap, освобождая память
+    ; выполняем системный вызов munmap, освобождая память
     mov rdi, [address]
     mov rsi, 1
     mov rax, 11
@@ -146,7 +151,7 @@ push rax
     mov rax, [digits_array+rcx*8]
 
     cmp rax, [rarest_amount]
-    jl .next
+    jg .next
     mov [rarest_one], cx
     mov [rarest_amount], rax
     ; call new_line
@@ -279,6 +284,52 @@ rarest_digit:
     pop rbx
     pop rax
     call exit
+ 
+
+; sort:
+;     push rax
+;     push rbx
+;     push rcx
+;     push rdx
+;     xor rcx, rcx
+;     mov rsi, buffer
+;     xor r8, r8
+;     xor r9, r9
+;     xor rax, rax
+;     xor rbx, rbx
+;     .mloop:
+;       push rcx
+
+
+;         .mloop_in:
+;           mov rbx, [address+rcx*2]
+;           mov ax, bx
+          
+;           jne .end_inner
+;           inc r9
+;           .end_inner:
+;           inc r9
+;           mov rdx, [N]
+;           dec rdx
+;           cmp rcx, rdx
+;           jl .mloop_in
+
+;       .end:
+;       pop rcx
+;       inc rcx
+;       cmp rcx, [N]
+;       jl .mloop
+;       mov rsi, msg_1
+;       call print_str
+;     mov rax, r8
+;     call number_str
+;     call print_str
+;     call new_line
+;     pop rdx
+;     pop rcx
+;     pop rbx
+;     pop rax
+;     call exit
 
 third_after_max:
   push rax
@@ -287,27 +338,69 @@ third_after_max:
   push rdx
   xor rcx, rcx
   mov rsi, buffer
+  ; call new_line
+  ; call new_line
+  xor r8, r8
   .mloop:
-    push rcx
+    
     xor rbx, rbx
+    xor rcx, rcx
+    xor rdx, rdx
     xor rax, rax
-    mov rbx, [address+rcx*2]
+    mov rbx, [address+r8*2]
     mov ax, bx
-    cmp ax, [num_1]
-    jl .ch2
+    ; and rax, rbx
+    ; xor rbx, rbx
 
+
+    push rax
+    ; mov rax, r8
+    ; mov rsi, buffer
+    ; call number_str
+    ; call print_str
+   pop rax
+  ;  mov bx, ax
+  ;  xor rax, rax
+  ;  mov ax, bx
+
+  ;  call spacing
+   push rax
+  ;   call number_str
+  ;   call print_str
+  ;   pop rax
+  ;   push rax
+  ;   call spacing
+  ;   call new_line
+  ;   call new_line
+  ; call num_status
+  pop rax
+
+  ; mov [num_1], ax
+  ; jmp .end
+  
+
+    
+ 
+    ; push rax
+    cmp WORD ax, [num_1]
+    jb .ch2
+    ; mov rsi, me1
+    ; call print_str
     mov bx, [num_1]
     mov cx, [num_2]
     mov dx, [num_3]
-    mov [num_1], ax
+    ; pop rax
+    mov WORD [num_1], ax
     mov [num_2], bx
     mov [num_3], cx
     mov [num_4], dx
     jmp .end
     .ch2:
 
-    cmp ax, [num_2]
-    jl .ch3
+    cmp WORD ax, [num_2]
+    jb .ch3
+    ;     mov rsi, me2
+    ; call print_str
     mov bx, [num_2]
     mov cx, [num_3]
     mov [num_2], ax
@@ -316,23 +409,27 @@ third_after_max:
     jmp .end
     .ch3:
 
-    cmp ax, [num_3]
-    jl .ch4
+    cmp WORD  ax, [num_3]
+    jb .ch4
+    ;     mov rsi, me3
+    ; call print_str
     mov bx, [num_3]
     mov [num_3], ax
     mov [num_4], bx
     jmp .end
     .ch4:
 
-    cmp ax, [num_4]
-    jl .end
+    cmp WORD  ax, [num_4]
+    jb .end
+    ; mov rsi, me1
+    ; call print_str
     mov [num_4], ax
 
     .end:
-    pop rcx
-    inc rcx
-    cmp rcx, [N]
-    jl .mloop
+    
+    inc r8
+    cmp r8, [N]
+    jb .mloop
     mov rsi, msg_2
     call print_str
     xor rax, rax
@@ -399,4 +496,45 @@ printer:
   pop rcx
   pop rbx
   pop rax
+  ret
+
+spacing:
+  push rsi
+  push rcx
+  mov rsi, spac
+  call print_str
+  pop rcx
+  pop rsi
+  ret
+
+num_status:
+  push rsi
+  push rcx
+  push rax
+  call new_line
+  xor rax, rax
+  mov ax, [num_1]
+  mov rsi, buffer
+  call number_str
+  call print_str
+  call spacing
+  mov ax, [num_2]
+  mov rsi, buffer
+  call number_str
+  call print_str
+  call spacing
+  mov ax, [num_3]
+  mov rsi, buffer
+  call number_str
+  call print_str
+  call spacing
+  mov ax, [num_4]
+  mov rsi, buffer
+  call number_str
+  call print_str
+  call new_line
+
+  pop rax
+  pop rcx
+  pop rsi
   ret

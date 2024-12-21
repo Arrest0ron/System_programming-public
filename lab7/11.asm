@@ -19,10 +19,8 @@ _start:
 	mov rsi, filename_1
 	call input_keyboard 
 
-
 	mov rsi, filename_2
 	call input_keyboard
-
 
 	mov rsi, buf64
 	call input_keyboard

@@ -1,11 +1,10 @@
 format ELF64
+;fasm series.asm &&  ld series.o -lc -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lm -o series && ./series
 
 include 'func.asm'
 extrn printf
 extrn exp
 extrn pow
-;extrn exit
-;fasm pi_series.asm && ld pi_series.o -lc -lm -lncurses -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o pi_series.out
 
 section '.data' writable
     top_out db "X         Delta         Diff          N", 0xA, 0
@@ -24,7 +23,7 @@ section '.data' writable
     three dq 3.0
 
     numbers dq 0.0, 0.25, 0.5,0.75,  1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5
-    counter dq 1
+    counter dq 0
     evaluation_n dq 0
     
     x dq 0.0
@@ -85,7 +84,7 @@ _start:
             ; mov rdi, true_output
             ; call printf
             ; movq xmm0, [ultra_res]
-            ; mov rbx, [counter]
+            mov rbx, [counter]
             movq xmm0, [numbers+8*rbx]
             mov rax, 2 
             mov rdi, X_out
@@ -106,7 +105,7 @@ _start:
             mov rax, 1
             call printf
                 inc [counter]
-                cmp [counter], 10
+                cmp [counter], 11
                 jl .mlp2
 
   

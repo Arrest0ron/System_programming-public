@@ -2,6 +2,10 @@
 
 format elf64
 public _start
+
+extrn printf
+
+
 include 'func.asm'
 
 section '.data' writeable
@@ -10,16 +14,26 @@ section '.data' writeable
   msg_2 db 'Successfull bind', 0xa, 0
   msg_3 db 'New connection on server',0xA, 0
   msg_4 db 'Successfull listen', 0xa, 0
+  ping_msg db '[pingall]', 0xA, 0
+  from_msg db '[usr%d]: '
+
   automated_response db 'ping client', 0xA, 0
   address dq 0
   new_status db 0
+
+  ids dq 0
+  val dq 0
+    sm1 dw 0, -1, 4096 
+   sm2 dw 0, 1, 4096   
   
   
 section '.bss' writable
 	
   buffer rb 100
   buffer_help rb 200
+  read_buffer rb 100
   descriptors dq 2
+  my_status dq 0
 
 ;;Структура для клиента
   struc sockaddr_in
@@ -37,6 +51,26 @@ section '.bss' writable
 section '.text' executable
 	
 _start:
+    ;;Создаем семафор
+    mov rdi, 0
+    mov rsi, 1
+    mov rdx, 438 ;;0o666
+    or rdx, 512
+    mov rax, 64
+    syscall
+    
+    mov [ids], rax
+    
+    ;;Переводим семафор в состояние готовности
+    mov rdi, [ids] ;дескриптор семафора
+    mov rsi, 0     ;индекс в массиве
+    mov rdx, 16    ;выполняемая команда
+    mov r10, 0   ;начальное значение
+    mov rax, 66
+    syscall
+
+
+    
   
       ;;Первый процесс создает разделяемую память
     mov rdi, 0    ;начальный адрес выберет сама ОС
@@ -144,7 +178,7 @@ _bind_error:
 _read:
       mov rax, 0 ;номер системного вызова чтения
       mov rdi, r12 ;загружаем файловый дескриптор
-      mov rsi, buffer ;указываем, куда помещать прочитанные данные
+      mov rsi, read_buffer ;указываем, куда помещать прочитанные данные
       mov rdx, 100 ;устанавливаем количество считываемых данных
       syscall ;выполняем системный вызов read
 
@@ -154,6 +188,11 @@ _read:
       ;;Если клиент ничего не прислал, продолжаем
       cmp rax, 0
       je _read     
+      mov rdi, from_msg
+      mov rsi, r12
+      call printf
+      
+      mov rsi, read_buffer
       call print_str
       call new_line
       
@@ -161,7 +200,7 @@ _read:
       mov rcx, 100
       mov rax, 0
       .lab:
-        mov [buffer+rcx], 0
+        mov [read_buffer+rcx], 0
       loop .lab 
 jmp _read
 
@@ -175,20 +214,45 @@ _write:
     ; call input_keyboard
     
     ;;Отправляем сообщение на клиенту
-    xor rax, rax
-  mov rdi, [address]
-  cmp BYTE [rdi+1],0
-    je _write
-    cmp BYTE [rdi+1],0
-    jb _write
+  ;   xor rax, rax
+  ; mov rdi, [address]
+  
+  ; cmp BYTE [rdi+1],0
+  ;   jle _write
+        ;;Запираем семафор
+
+
+    mov rdi, [ids]
+    mov rsi, sm1
+    mov rdx,1
+    mov rax, 65
+    syscall
+    
+    ; dec BYTE [rdi+1]
+
+    mov rsi, ping_msg
+    call print_str
+
+    ; xor rax, rax
+    ; mov rdi, [address]
+    ; mov al, [rdi+1]
+    ; mov rsi, buffer
+    ; call number_str
+    ; call print_str
+    ; call new_line
+
 
     mov rax, 1
     mov rdi, r12
     mov rsi, automated_response
     mov rdx, 13
     syscall
-      mov rdi, [address]
-    dec  BYTE [rdi+1]
+
+      ; mov rdi, [address]
+
+
+    
+
 
 
 jmp _write
@@ -199,11 +263,27 @@ _input:
     mov rsi, buffer
     call input_keyboard
     xor rax, rax
-    mov rdi, [address]
-    mov BYTE al, [rdi]
+    ; mov rdi, [address]
+    ; mov BYTE al, [rdi]
 
-    mov [rdi+1], al
-
+    ; mov [rdi+1], al
+     ;;Открываем семафор
+    ; mov rdi, [ids]
+    ; mov rsi, sm2
+    ; mov rdx,0
+    ; mov rax, 65
+    ; syscall
+     ;;Открываем семафор
+    mov rdi, [ids]
+    mov rsi, sm2
+    mov rdx,1
+    mov rax, 65
+    syscall
+    mov rdi, [ids]
+    mov rsi, sm2
+    mov rdx,1
+    mov rax, 65
+    syscall
     ; mov al, [new_status]
     ; call number_str
     ; call print_str

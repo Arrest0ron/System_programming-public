@@ -10,10 +10,14 @@ extrn pow
 section '.data' writable
     fmt1 db "Первое представление: %d итераций, точность: %.10f", 10, 0
     fmt2 db "Второе представление: %d итераций, точность: %.10f", 10, 0
+    delta_out db "Delta: %.15f", 0xA, 0
+    N_out db " N = %d" ,0xA, 0
     true_output db "True number: %.15f for x: %.2f", 0xA, 0
     calc_output db "Calc number: %.15f for x: %.2f", 0xA, 0
     tolerance dq 0.00000001           ; Заданная точность
     e_real dq 2.71828182846
+    delta dq 0.001
+    diff dq 0.0
 
     zero dq 0.0
     one dq 1.0
@@ -21,8 +25,8 @@ section '.data' writable
     three dq 3.0
 
     numbers dq 0.0, 0.25, 0.5,0.75,  1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5
-    counter dq 0
-    evaluation_n dq 2999
+    counter dq 1
+    evaluation_n dq 0
     
     x dq 0.0
     n dq 1
@@ -32,7 +36,7 @@ section '.data' writable
     ; two dq 2.0
 
 section '.bss' writable
-    
+    true_res rq 10
     result rq 10
     ultra_res rq 10
 section '.text' executable
@@ -50,16 +54,16 @@ _start:
                                 .mlp2:
     ; mov [counter], 5
     ; push rcx
+    .ench:
+    inc [evaluation_n]
             mov rbx, [counter]
             mov rax, [numbers+8*rbx]
             mov [x], rax
             call correct ;xmm0 correct
-            movq xmm1, [x]
-            mov rax, 2
-            mov rdi, true_output
-            ; push rdx
-            call printf
-            ; pop rdx
+            ; movq xmm1, [x]
+            ; mov rax, 2
+            ; mov rdi, true_output
+            ; call printf
 
             mov rbx, [counter]
             mov rax, [numbers+8*rbx]
@@ -67,12 +71,56 @@ _start:
             mov rax, [evaluation_n]
             mov [n], rax
             call sum_for_n
+            ; movq xmm0, [ultra_res]
+            ; mov rbx, [counter]
+            ; movq xmm1, [numbers+8*rbx]
+            ; mov rax, 2 
+            ; mov rdi, calc_output
+            ; call printf
+            finit
+            ffree st0
+            ffree st1
+            fld [true_res]
+            fsub [ultra_res]
+        
+            fabs 
+            fst [diff]
+
+
+            fld [delta]
+
+            finit 
+            fld [delta]
+            fld [diff]
+            fcomip st0, st1
+            ja .ench
+
+            movq xmm0, [true_res]
+            movq xmm1, [x]
+            mov rax, 2
+            mov rdi, true_output
+            call printf
             movq xmm0, [ultra_res]
             mov rbx, [counter]
             movq xmm1, [numbers+8*rbx]
             mov rax, 2 
             mov rdi, calc_output
             call printf
+            mov rsi, [evaluation_n]
+            mov rdi, N_out
+            mov rax, 1
+            call printf
+                        movq xmm0, [delta]
+            mov rax, 1
+            mov rdi, delta_out
+            call printf
+            movq xmm0, [diff]
+            mov rax, 1
+
+            mov rdi, delta_out
+
+            call printf
+            
         ; pop rcx
                                         inc [counter]
                                         cmp [counter], 10
@@ -127,8 +175,8 @@ ffree st1
     movq [result], xmm3
     fld [result]
     fmul st0, st1
-    fstp [result]
-    movq xmm0, [result]
+    fstp [true_res]
+    movq xmm0, [true_res]
 pop rcx
 pop rax
     ret

@@ -258,14 +258,21 @@ _write:
     call input_keyboard
     
     cmp byte [buffer2], 'Q'
-    
-    je _start.end
+    jne .next3
+    call quit_game
+    mov rax, 1
+    mov rdi, [server]
+    mov rsi, buffer2
+    mov rdx, 100
+    syscall
+    jmp _start.end
+    .next3:
 
     cmp byte [buffer2], 'T'
     jne .next1
     call take_card
     jmp .next2
-    
+  
 
 
     .next1:
@@ -282,6 +289,9 @@ _write:
     mov rsi, buffer2
     mov rdx, 100
     syscall
+
+    
+    ; je _start.end
 
       ; mov rcx, 100
       ; .lab:

@@ -32,6 +32,7 @@ results2_msg db 0xA,  '______________ Начало игры ______________', 0xA
   random_resp db 'Ваше число - %d', 0xA, 0
   new_player_stats db 'Имеется %d игроков, %d - активно.',0xA,0  
   nowin db 'Победителей нет!', 0xA, 0     
+  user_left_msg db 'Игрок %d покинул игру, осталось %d игроков.', 0xA,0
   cards_scores_players_current dq 0 ; +0-63 scores (up to 64 players) , +64 - total players
   new_status db 0
   enders dq 0  ; +0-63 enders, +64 - current_ended
@@ -71,7 +72,7 @@ _start:
 
     ;;Создаем семафор
     mov rdi, 0
-    mov rsi, 1
+    mov rsi, 2
     mov rdx, 438 ;;0o666
     or rdx, 512
     mov rax, 64
@@ -200,6 +201,9 @@ _start:
      je _write
       
      jmp .main_loop
+
+
+     .clean_memory:
         ;; выполняем системный вызов munmap, освобождая память
     mov rdi, [cards_scores_players_current]
     mov rsi, 1
@@ -274,7 +278,6 @@ _read:
       .next12:
       cmp BYTE [read_buffer], '#'
       jne .next2
-
       mov rbx, [cards_scores_players_current]
       mov rdi, other_stop_msg
       mov rsi, r12
@@ -285,38 +288,58 @@ _read:
       call printf
       pop r10
       pop r12
-        mov r10, [enders]
-  dec BYTE [r10+64]
-
-    mov r10, [enders]
-  cmp BYTE [r10+64], 0
-  jne .ncalc
-  mov rsi, endgame_msg
-  call print_str
-  inc BYTE [r10+64]
-
-
-  call calculate_results
-  ;   mov rsi, endgame_msg
-  ; call print_str 
-  jmp _read
-
-
-  .ncalc:
-  mov rdi, left_players_msg
-  xor rax, rax
-  mov BYTE al, [r10+64]
-  mov rsi, rax
-
-  call printf
-
-      ; mov byte [rbx+r12], 0
+      mov r10, [enders]
+      dec BYTE [r10+64]
+      mov r10, [enders]
+      cmp BYTE [r10+64], 0
+      jne .ncalc
+      mov rsi, endgame_msg
+      call print_str
+      inc BYTE [r10+64]
+      call calculate_results
+      ;   mov rsi, endgame_msg
+      ; call print_str 
       jmp _read
 
 
+      .ncalc:
+      mov rdi, left_players_msg
+      xor rax, rax
+      mov BYTE al, [r10+64]
+      mov rsi, rax
 
+      call printf
+
+          ; mov byte [rbx+r12], 0
+      jmp _read
 
       .next2:
+      cmp BYTE [read_buffer], '|'
+      jne .next3
+      xor rdx, rdx
+      mov rdi, user_left_msg
+      mov rsi, r12
+      mov rbx, [enders]
+      dec BYTE [rbx+64]
+      mov rbx, [cards_scores_players_current]
+      dec BYTE [rbx+64]
+      mov BYTE dl, [rbx+64]
+      call printf
+      mov rbx, [enders]
+      cmp BYTE [rbx+64], 1
+      jg .ex 
+      ; push rcx
+      call calculate_results
+      ; pop rcx
+      .ex:
+      call exit
+
+
+
+
+
+
+      .next3:
       mov rdi, from_msg
       mov rsi, r12
       call printf
@@ -373,8 +396,21 @@ jmp _write
       
 _input:
 
+    mov rbx, [enders]
+    xor rax, rax
+    mov al, [rbx+64]
+    cmp rax, 0 
+    je _input
+
     mov rsi, [message_to_all]
-    call input_keyboard
+    ; call input_keyboard
+
+    mov rbx, [enders]
+    xor rax, rax
+    mov al, [rbx+64]
+    cmp rax, 0 
+    je _input
+
     mov rsi, [message_to_all]
     mov byte [rsi+63], 0
     ; call print_str
@@ -451,9 +487,14 @@ calculate_results:
 
   
   mov r10, [enders]
-  dec BYTE [r10+64]
   cmp BYTE [r10+64], 0
   je .con
+  jl .con
+
+  dec BYTE [r10+64]
+    cmp BYTE [r10+64], 0
+  je .con
+  jl .con
   ret
 
   .con:

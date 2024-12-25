@@ -12,10 +12,11 @@ take_msg db 'Ваша карта: %d, сумма %d', 0xA,0
   msg_4 db 'Error connect', 0xa, 0
   msg_enter db 'Вы присоединились к игре. Отправьте T, чтобы взять карту, или S, чтобы остановиться.', 0xa, 0
   number dq 0
+  quit_msg db 'Вы покинули игру!', 0xA, 0
   msg_lost db 'Переполнение! Вы проиграли.', 0xA, 0
   reading_msg db '_r_', 0
   
-  ender db 'Ending coonection', 0xA, 0
+  ender db 'Ending connection', 0xA, 0
   random_resp db 'Ваше число - %d', 0xA, 0
   stop_msg db 'Вы остановились на счете %d', 0xA,0
   RANDOM dq 0
@@ -175,12 +176,10 @@ _start:
     mov rdx,1
     mov rax, 65
     syscall
-      mov rsi, ender
-      call print_str
-     call exit
-    .end:
     mov rsi, ender
     call print_str
+    .end:
+    call quit_game
 
     mov rdi, [ids]
     mov rsi, sm2
@@ -188,15 +187,15 @@ _start:
     mov rax, 65
     syscall
     ; ;;Закрываем чтение, запись из клиентского сокета
-    ; mov rax, 48
-    ; mov rdi, r9
-    ; mov rsi, 2
-    ; syscall
+    mov rax, 48
+    mov rdi, r9
+    mov rsi, 2
+    syscall
           
-    ; ;;Закрываем клиентский сокет
-    ; mov rdi, r9
-    ; mov rax, 3
-    ; syscall
+    ;;Закрываем клиентский сокет
+    mov rdi, r9
+    mov rax, 3
+    syscall
     
     call exit
 
@@ -259,6 +258,7 @@ _write:
     call input_keyboard
     
     cmp byte [buffer2], 'Q'
+    
     je _start.end
 
     cmp byte [buffer2], 'T'
@@ -339,4 +339,13 @@ stop_take:
     mov BYTE [buffer2], '#'
     mov BYTE [buffer2+1], 0
     mov [balance], 0
+    ret
+
+quit_game:
+    mov rdi, quit_msg
+    push rax
+    call printf
+    pop rax
+    mov BYTE [buffer2], '|'
+    mov BYTE [buffer2+1], 0
     ret

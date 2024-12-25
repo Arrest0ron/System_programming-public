@@ -16,6 +16,7 @@ section '.data' writeable
   score_msg db 'Игрок %d закончил игру со счетом %d', 0xA, 0
   msg_4 db 'Successfull listen', 0xa, 0
   reset_amount_msg db 'Перезапускаем игру для %d игроков', 0xA, 0
+  win_msg db 'Победил пользователь %d со счетом %d', 0xA, 0
   new_game_msg db 'Новая игра началась!', 0xA, 0
   ping_msg db '[ping%d]', 0xA, 0
   from_msg db '[usr%d]: ', 0xA, 0
@@ -26,13 +27,17 @@ section '.data' writeable
   left_players_msg db '<Осталось %d игроков>', 0xA, 0
   endgame_msg db 'Игра окончена. Подсчет результатов...', 0xA,0
   automated_response db 'ping client', 0xA, 0
+  results_msg db 0xA, '____________ Результаты игры ____________', 0xA,0
+results2_msg db 0xA,  '______________ Начало игры ______________', 0xA,0
   random_resp db 'Ваше число - %d', 0xA, 0
-  new_player_stats db 'Имеется %d игроков, %d - активно.',0xA,0       
+  new_player_stats db 'Имеется %d игроков, %d - активно.',0xA,0  
+  nowin db 'Победителей нет!', 0xA, 0     
   cards_scores_players_current dq 0 ; +0-63 scores (up to 64 players) , +64 - total players
   new_status db 0
   enders dq 0  ; +0-63 enders, +64 - current_ended
   inp_msg db '_in_', 0xA, 0
   message_to_all dq  0 ;+0-64 - msg
+  max_to21 dq 0, 0
 
 
   ids dq 0
@@ -372,7 +377,7 @@ _input:
     call input_keyboard
     mov rsi, [message_to_all]
     mov byte [rsi+63], 0
-    call print_str
+    ; call print_str
     xor rax, rax
     ; mov rdi, [address]
     ; mov BYTE al, [rdi]
@@ -437,10 +442,14 @@ new_game:
   mov rsi, rax
   mov rdi, reset_amount_msg
   call printf
+  mov [max_to21], 0
+  mov [max_to21+8], 0
   ret
 
 calculate_results:
- 
+
+
+  
   mov r10, [enders]
   dec BYTE [r10+64]
   cmp BYTE [r10+64], 0
@@ -448,6 +457,8 @@ calculate_results:
   ret
 
   .con:
+    mov rsi, results_msg
+  call print_str
   mov rcx, 63
   xor rax, rax
   mov rbx, [cards_scores_players_current]
@@ -468,6 +479,13 @@ calculate_results:
                     push rax
                     xor rdx, rdx
                     mov byte dl, [rbx+rcx]
+                    cmp rdx, 21
+                    jg .cmx
+                    cmp rdx, [max_to21+8]
+                    jl .cmx
+                    mov [max_to21+8], rdx
+                    mov [max_to21], rcx
+                    .cmx:
                     ; xor rdx,rdx
                     mov rsi, rcx
                     mov rdi, score_msg
@@ -478,10 +496,26 @@ calculate_results:
                     pop rbx
                     ; ; pop rsi
   .next:
+
   pop rcx
   dec rcx
   cmp rcx, -1
   jne .lp
-        call new_game
+  mov rsi, [max_to21]
+  mov rdx, [max_to21+8]
+  mov rdi, win_msg
+
+  cmp rdx, 0
+  jne .thew
+  mov rdi, nowin
+  .thew:
+  push r10
+  call printf
+  pop r10
+  mov rsi, results2_msg
+  call print_str
+  call new_game
+
+
   ret
   

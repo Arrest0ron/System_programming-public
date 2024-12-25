@@ -9,14 +9,20 @@ extrn printf
 include 'func.asm'
 
 section '.data' writeable
-  
+  sent_gain_msg db '_C!_', 0xA,0
+  sent_stop_msg db '_C#_', 0xA,0
+  sent_win_msg db '_C^_', 0xA,0
+
+  user_caused db '_event # caused by %d', 0xA, 0
+
+  sending_dt db ' sent to %d', 0xA, 0
   msg_1 db 'Error bind', 0xa, 0
   msg_2 db 'Successfull bind', 0xa, 0
   msg_3 db 'New connection on server',0xA, 0
   score_msg db 'Игрок %d закончил игру со счетом %d', 0xA, 0
   msg_4 db 'Successfull listen', 0xa, 0
   reset_amount_msg db 'Перезапускаем игру для %d игроков', 0xA, 0
-  win_msg db 'Победил пользователь %d со счетом %d', 0xA, 0
+  win_msg db '>Победил пользователь %d со счетом %d<', 0xA, 0
   new_game_msg db 'Новая игра началась!', 0xA, 0
   ping_msg db '[ping%d]', 0xA, 0
   from_msg db '[usr%d]: ', 0xA, 0
@@ -26,6 +32,7 @@ section '.data' writeable
   other_connected db '<Присоединился новый игрок - usr%d>', 0xA, 0
   left_players_msg db '<Осталось %d игроков>', 0xA, 0
   endgame_msg db 'Игра окончена. Подсчет результатов...', 0xA,0
+
   automated_response db 'ping client', 0xA, 0
   results_msg db 0xA, '____________ Результаты игры ____________', 0xA,0
 results2_msg db 0xA,  '______________ Начало игры ______________', 0xA,0
@@ -45,20 +52,23 @@ results2_msg db 0xA,  '______________ Начало игры ______________', 0xA
   val dq 0
     sm1 dw 0, -1, 4096 
    sm2 dw 0, 1, 4096   
+
+    wsm1 dw 1, -1, 4096 
+   wsm2 dw 1, 1, 4096   
   
   
 section '.bss' writable
 	
   buffer rb 100
   buffer_help rb 200
-  read_buffer rb 100
+  read_buffer rb 101
 
   random_desc rq 1
 ;;Структура для клиента
   struc sockaddr_in
 {
   .sin_family dw 2         ; AF_INET
-  .sin_port dw 0x3d9     ; port 55555
+  .sin_port dw 0x4d9     ; port 
   .sin_addr dd 0           ; localhost
   .sin_zero_1 dd 0
   .sin_zero_2 dd 0
@@ -87,6 +97,15 @@ _start:
     mov r10, 0   ;начальное значение
     mov rax, 66
     syscall
+
+        ;;Переводим семафор в состояние готовности
+    mov rdi, [ids] ;дескриптор семафора
+    mov rsi, 1     ;индекс в массиве
+    mov rdx, 16    ;выполняемая команда
+    mov r10, 0   ;начальное значение
+    mov rax, 66
+    syscall
+
       ;;Первый процесс создает разделяемую память
     mov rdi, 0    ;начальный адрес выберет сама ОС
     mov rsi, 512    ;задаем размер области памяти
@@ -229,15 +248,24 @@ _read:
       cmp rax, 0
       je _read     
 
+      push rdx
+      push rax
+      push r12  ;user
+      push rcx
+                                ;       mov rdi, user_caused
+                                ; mov rsi, r12
+                                ; call printf
+      pop rcx
+      pop r12
+      pop rax
+      pop rdx
+
       cmp BYTE [read_buffer], '!'
       jne .next12
-
       mov rbx, [cards_scores_players_current]
-      
       xor rax, rax
       mov al, [read_buffer+1]
       add BYTE [rbx+r12], al
-
       mov rdi, other_takes_msg
       xor rax, rax
       mov al, [read_buffer+1]
@@ -246,9 +274,18 @@ _read:
       mov rbx, [cards_scores_players_current]
       xor rcx, rcx
       mov cl, BYTE [rbx+r12]
-
+      push rdx
+      push rax
+      push r12  ;user
+      push rcx
       ; push rax
       call printf
+      pop rcx
+      pop r12
+      pop rax
+      pop rdx
+      mov rax, rcx
+      call to_all_takes        ;/////////////////////////////
       ; pop rax
       mov rbx, [cards_scores_players_current]
       xor rax, rax
@@ -268,6 +305,7 @@ _read:
       pop r9
       pop r12
       call calculate_results
+      mov BYTE [read_buffer], 0
 
 
       ; mov byte [rbx+r12], 0
@@ -297,6 +335,7 @@ _read:
       call print_str
       inc BYTE [r10+64]
       call calculate_results
+
       ;   mov rsi, endgame_msg
       ; call print_str 
       jmp _read
@@ -306,9 +345,23 @@ _read:
       mov rdi, left_players_msg
       xor rax, rax
       mov BYTE al, [r10+64]
+      
       mov rsi, rax
-
+      push r12
+      push rax
+      xor rax, rax
       call printf
+      pop rax
+      pop r12
+      mov rdi, [cards_scores_players_current]
+      xor rax, rax
+      mov BYTE al, [rdi+r12]
+
+      ;///////////////////////////
+      ; r12 - name
+      ; rax - total
+      ; rcx 
+      call to_all_stop
 
           ; mov byte [rbx+r12], 0
       jmp _read
@@ -333,10 +386,6 @@ _read:
       ; pop rcx
       .ex:
       call exit
-
-
-
-
 
 
       .next3:
@@ -370,29 +419,36 @@ _write:
     mov  BYTE al, [rdi+64]
     mov rsi, rax
     mov rdi, ping_msg
-    call printf
+    ; call printf
 
 
-  ; mov rsi, message_to_all
+    mov rsi, [message_to_all]
+    xor rax, rax
+    mov  BYTE al, [rsi]
+    cmp rax, '^'
+    je .nnn
+    mov  BYTE al, [rsi+1]
+    cmp rax, r12
+    je _write
+    .nnn:
+    
   
     mov rax, 1
     mov rdi, r12
     mov rsi, [message_to_all]
     mov rdx, 64
     syscall
+                      ; mov rsi, [message_to_all]
+                      ; mov byte al, [rsi]
+                      ; mov byte [sending_dt], al
+                      ; mov rdi, sending_dt
+                      ; mov rsi, r12
+                      ; call printf
+
+    
 
 jmp _write
 
-; _write_once:
-
-
-;     mov rax, 1
-;     mov rdi, r12
-;     mov rsi, once_buf
-;     mov rdx, 13
-;     syscall
-
-; jmp _write_once
       
 _input:
 
@@ -403,7 +459,7 @@ _input:
     je _input
 
     mov rsi, [message_to_all]
-    ; call input_keyboard
+    call input_keyboard
 
     mov rbx, [enders]
     xor rax, rax
@@ -480,6 +536,7 @@ new_game:
   call printf
   mov [max_to21], 0
   mov [max_to21+8], 0
+  mov QWORD [message_to_all], 0
   ret
 
 calculate_results:
@@ -498,6 +555,8 @@ calculate_results:
   ret
 
   .con:
+
+      
     mov rsi, results_msg
   call print_str
   mov rcx, 63
@@ -555,8 +614,138 @@ calculate_results:
   pop r10
   mov rsi, results2_msg
   call print_str
+  push rcx
+  push rax
+  xor rax, rax
+  xor rcx, rcx
+  mov rcx, [max_to21]
+  mov rax, [max_to21+8]
+  call win_all
+  pop rax
+  pop rcx
+
   call new_game
-
-
   ret
   
+
+to_all_takes:
+
+    mov rdi, [message_to_all]
+    mov BYTE [rdi], '!'
+    mov rcx, r12
+    mov BYTE [rdi+1], cl ; temp
+    mov BYTE [rdi+2], dl;temp
+    mov BYTE [rdi+3], al;temp
+    mov BYTE [rdi+4], 0
+                      ; mov rsi, sent_gain_msg
+                      ; call print_str
+
+push rdx
+push rax
+push rcx
+push r12
+    xor rcx, rcx
+    mov rdi, [cards_scores_players_current]
+    mov  BYTE cl, [rdi+64]
+
+    .lp2:
+      push rcx
+    ; syscall
+     ;;Открываем семафор
+      mov rdi, [ids]
+      mov rsi, sm2
+      mov rdx,1
+      mov rax, 65
+      syscall
+      pop rcx
+      dec rcx
+      cmp rcx, 0
+      jne .lp2
+    pop r12
+    pop rcx
+    pop rax
+    pop rdx
+
+    ret
+
+to_all_stop:
+      mov rdi, [message_to_all]
+      mov BYTE [rdi], '#'
+      mov rcx, r12
+      mov BYTE [rdi+1], cl ; temp
+      mov BYTE [rdi+2], al;temp
+      mov BYTE [rdi+3], 0;temp
+      mov BYTE [rdi+4], 0
+                          ; mov rsi, sent_stop_msg
+                          ; call print_str
+  push rdx
+  push rax
+  push rcx
+  push r12
+      xor rcx, rcx
+      mov rdi, [cards_scores_players_current]
+      mov  BYTE cl, [rdi+64]
+
+      .lp2:
+        push rcx
+      ; syscall
+      ;;Открываем семафор
+
+        mov rdi, [ids]
+        mov rsi, sm2
+        mov rdx,1
+        mov rax, 65
+        syscall
+        pop rcx
+        
+        dec rcx
+        cmp rcx, 0
+        jne .lp2
+
+
+
+      pop r12
+      pop rcx
+      pop rax
+      pop rdx
+
+
+      ret
+  
+win_all:
+
+      mov rdi, [message_to_all]
+      mov BYTE [rdi], '^'
+      ; mov rcx, r12
+      mov BYTE [rdi+1], cl ; temp
+      mov BYTE [rdi+2], al;temp
+      mov BYTE [rdi+3], 0;temp
+      mov BYTE [rdi+4], 0
+                            ; mov rsi, sent_stop_msg
+                            ; call print_str
+  push rdx
+  push rax
+  push rcx
+  push r12
+      xor rcx, rcx
+      mov rdi, [cards_scores_players_current]
+      mov  BYTE cl, [rdi+64]
+
+      .lp2:
+        push rcx
+      ; syscall
+      ;;Открываем семафор
+        mov rdi, [ids]
+        mov rsi, sm2
+        mov rdx,1
+        mov rax, 65
+        syscall
+        pop rcx
+        dec rcx
+        cmp rcx, 0
+        jne .lp2
+      pop r12
+      pop rcx
+      pop rax
+      pop rdx
+      ret

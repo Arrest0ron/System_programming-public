@@ -208,7 +208,7 @@ _start:
       push r9
       ; push r10
       push r12
-      call printf
+      call safe_printf
       pop r12
       ; pop r10
       pop r9
@@ -263,17 +263,17 @@ _read:
       mov rsi, DBG_read
       call print_str
 
-      push rdx
-      push rax
-      push r12  ;user
-      push rcx
-                                ;       mov rdi, user_caused
-                                ; mov rsi, r12
-                                ; call printf
-      pop rcx
-      pop r12
-      pop rax
-      pop rdx
+      ; push rdx
+      ; push rax
+      ; push r12  ;user
+      ; push rcx
+      ;                           ;       mov rdi, user_caused
+      ;                           ; mov rsi, r12
+      ;                           ; call safe_printf
+      ; pop rcx
+      ; pop r12
+      ; pop rax
+      ; pop rdx
 
       cmp BYTE [read_buffer], '!'
       jne .next12
@@ -297,7 +297,7 @@ _read:
 
 
 
-      call printf
+      call safe_printf
 
 
 
@@ -322,7 +322,7 @@ _read:
       mov dl, BYTE [rbx+r12]
       push r12
       push r9
-      call printf
+      call safe_printf
       pop r9
       pop r12
       call calculate_results
@@ -346,7 +346,7 @@ _read:
       mov dl, BYTE [rbx+r12]
       push r12
       push r10
-      call printf
+      call safe_printf
       pop r10
       pop r12
       mov r10, [enders]
@@ -376,7 +376,7 @@ _read:
       push r12
       push rax
       xor rax, rax
-      call printf
+      call safe_printf
       pop rax
       pop r12
       mov rdi, [cards_scores_players_current]
@@ -406,7 +406,7 @@ _read:
       mov rbx, [cards_scores_players_current]
       dec BYTE [rbx+64]
       mov BYTE dl, [rbx+64]
-      call printf
+      call safe_printf
       mov rbx, [enders]
       cmp BYTE [rbx+64], 1
       jg .ex 
@@ -420,7 +420,7 @@ _read:
       .next3:
       mov rdi, from_msg
       mov rsi, r12
-      call printf
+      call safe_printf
       
       mov rsi, read_buffer
       call print_str
@@ -464,7 +464,7 @@ _write:
     mov  BYTE al, [rdi+64]
     mov rsi, rax
     mov rdi, ping_msg
-    ; call printf
+    ; call safe_printf
 
 
     mov rsi, [message_to_all]
@@ -488,7 +488,7 @@ _write:
                       ; mov byte [sending_dt], al
                       ; mov rdi, sending_dt
                       ; mov rsi, r12
-                      ; call printf
+                      ; call safe_printf
 
 mov rsi, DBG_write_end
       call print_str
@@ -558,7 +558,7 @@ new_game:
   mov BYTE [r10+64], al
   mov rsi, rax
   mov rdi, reset_amount_msg
-  call printf
+  call safe_printf
   mov [max_to21], 0
   mov [max_to21+8], 0
   mov QWORD [message_to_all], 0
@@ -619,7 +619,7 @@ calculate_results:
                     mov rsi, rcx
                     mov rdi, score_msg
                     ; mov rsi, score_msg
-                    call printf
+                    call safe_printf
                     ; ; call print_str
                     pop rax
                     pop rbx
@@ -639,7 +639,7 @@ calculate_results:
   mov rdi, nowin
   .thew:
   push r10
-  call printf
+  call safe_printf
   pop r10
   mov rsi, results2_msg
   call print_str
@@ -858,7 +858,7 @@ safe_printf:
     
     ; Вызов printf
     xor eax, eax    ; 0 floating point args
-    call printf
+    call safe_printf
     
     ; Восстанавливаем регистры
     pop r11

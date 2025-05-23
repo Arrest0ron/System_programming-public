@@ -4,7 +4,7 @@ format elf64
 public _start
 
 extrn printf
-
+extrn mydelay
 
 include 'func.asm'
 
@@ -267,57 +267,81 @@ _read:
       call debug_amounts
 
     
-      mov rsi, [cards_scores_players_current]
-      mov rbx, read_buffer
+      ; mov rsi, [cards_scores_players_current]
+      ; mov rbx, read_buffer
+      
+
+
       
       ;; ПРОВЕРКА НА ВЗЯТИЕ КАРТЫ
-      cmp BYTE [rsi], '!'
+      cmp BYTE [read_buffer], '!'
       jne .nocard
-        push rsi
-        push rdi
-        push rdx
-        push rbx
 
         mov rdi, other_takes_msg   ;строка для ввода
 
         xor rsi, rsi
-
-        mov rbx, [cards_scores_players_current]
-        mov rsi, [rdx+1000]       ;номер игрока - 1 аргумент
-       
-        xor rdx, rdx
-        mov BYTE dl, [rbx+1]
-        ;call safe_printf
+        xor rax, rax
+        mov BYTE al, [read_buffer]
+        mov rsi, rax
+        xor rax, rax
+        call safe_printf
         mov rdi, [message_to_all]
-        mov BYTE [rdi+0], '-'
-        mov BYTE  [rdi+1], '1'
-        mov BYTE [rdi+2], 0
+        mov rax, r12
 
-        mov rsi, read_msg
-        call print_str
-
-        pop rbx
-        pop rdx
-        pop rdi
-        pop rsi
-
-  
-
+        mov BYTE [rdi+0], al         ; кто взял
+        mov BYTE  [rdi+1], '!'       ; взял!
+        mov BYTE al, [read_buffer+1] 
+        mov BYTE [rdi+2], al         ; сколько 
+        mov rbx, r12
+        mov rsi, [cards_scores_players_current]
+        add [rsi+rbx], al
+        mov rax, [rsi+rbx]
+        mov BYTE [rdi+3], al        ; баланс взявшего 
+        mov BYTE [rdi+4], 0          ; терминатор
         jmp _read
         
-        
-        
-
       .nocard:
+
+
+      ;; ПРОВЕРКА НА ОСТАНОВКУ
+      cmp BYTE [read_buffer], '#'
+      jne .nostop
+
+        mov rdi, other_stop_msg   ;строка для ввода
+
+        xor rsi, rsi
+        xor rax, rax
+        mov BYTE al, [read_buffer]
+        mov rsi, rax
+        xor rax, rax
+        call safe_printf
+                mov rdi, [message_to_all]
+        mov rax, r12
+
+        mov BYTE [rdi+0], al         ; кто остановился
+        mov BYTE  [rdi+1], '#'       ; остановился!
+        mov BYTE al, [read_buffer+1] 
+        mov rbx, r12
+        mov rsi, [cards_scores_players_current]
+        add [rsi+rbx], al
+        mov rax, [rsi+rbx]
+        mov BYTE [rdi+2], al        ; баланс остановившегося
+        mov BYTE [rdi+3], 0          ; терминатор
+        jmp _read
+
+      .nostop:
       
-            mov rsi, read_buffer
+
+
+
+
+
+
+      mov rsi, read_buffer
       call print_str
       call new_line
-
-
       mov rsi, DBG_start_copy
       call print_str
-
 
     mov rsi, [message_to_all]
     mov rcx, 64
@@ -330,7 +354,13 @@ _read:
         cmp rcx, -1
         jne .copy_after_msg
 
-    mov rax, r12
+    xor rax, rax
+    mov rbx, r12
+    mov al, bl
+    ; mov rsi, temp
+    ; call number_str
+    ; call print_str
+
     mov rsi, [message_to_all]
     mov BYTE [rsi], al
           ; mov rax, 1
@@ -344,6 +374,8 @@ _read:
 jmp _read
 
 _write:
+  mov rdi, 50
+  call mydelay
 
   ; mov rsi, message_to_all
   ; call print_str
@@ -376,15 +408,18 @@ _write:
      mov rsi, r12
     call safe_printf
 
-    
-  mov rax, r12
-  cmp BYTE [message_to_all], al
+  xor rax, rax
+  xor rbx, rbx
+  mov rbx, r12
+  mov al, bl
+  mov rsi, [message_to_all]
+  cmp BYTE [rsi], al
   je _write
 
 
     mov rax, 1
     mov rdi, r12
-    mov rsi, [message_to_all+1]
+    mov rsi, [message_to_all]
     mov rdx, 64
     syscall
 jmp _write

@@ -25,7 +25,9 @@ take_msg db 'Ваша карта: %d, сумма %d', 0xA,0
   stop_msg db 'Вы остановились на счете %d', 0xA,0
   RANDOM dq 0
   win_win db 'Игрок %d выиграл со счетом %d!.', 0xA, 0
+  new_msg db '[Игрок%d]: %s', 0xA, 0
   start_of_msg db 'Sent message:',0
+   stack_alignment db 0
   end_of_msg db ':', 0
   two_symbol_buffer db 0,0
   quit db 'Q',0
@@ -40,6 +42,7 @@ section '.bss' writable
 	random_desc rq 1
   buffer1 rb 101
   buffer2 rb 101
+  temp rb 100
   server rq 1
 
   
@@ -71,6 +74,7 @@ addrlen_server = $ - addrstr_server
 section '.text' executable
 	
 extrn printf
+
 _start:
 
    mov rdi, f     
@@ -243,45 +247,34 @@ _read:
       ; call print_str
       cmp rax, 0
       je _read    
+
+            
+
       ; jne _read
-      cmp BYTE [buffer1], '!'
+      cmp BYTE [buffer1+1], '!'
       jne .co1
                                 ; mov rsi, gain_confirmed
                                 ; call print_str
-    push rax
-    push rdi
-    push rsi
-    push rdx
-    push rcx
-    push r8
-    push r9
-    push r10
-    push r11
+  
 
     mov rdi, other_takes_msg     
     xor rax, rax
-    mov BYTE al, [buffer1+1]   ; r12
+    mov BYTE al, [buffer1+0]   ; r12
     mov rsi, rax
+    xor rax, rax
     mov BYTE al, [buffer1+2]   ;dl
     mov rdx, rax
+    xor rax, rax
     mov BYTE al, [buffer1+3] ; al
     mov rcx, rax
     xor rax, rax          
-    call printf          
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rcx
-    pop rdx
-    pop rsi
-    pop rdi
-    pop rax
+    call safe_printf          
+  
     mov QWORD [buffer1], 0
     jmp _read
 
     .co1:
-    cmp BYTE [buffer1], '#'
+    cmp BYTE [buffer1+1], '#'
     jne .co2
                       ; mov rsi, stop_confirmed
                       ; call print_str
@@ -297,14 +290,14 @@ _read:
 
     mov rdi, other_stops_msg     
     xor rax, rax
-    mov BYTE al, [buffer1+1]   ; r12
+    mov BYTE al, [buffer1]   ; r12
     mov rsi, rax
     mov BYTE al, [buffer1+2]   ;dl
     mov rdx, rax
     mov BYTE al, [buffer1+3] ; al
     mov rcx, rax
     xor rax, rax          
-    call printf          
+    call safe_printf          
     pop r11
     pop r10
     pop r9
@@ -315,12 +308,15 @@ _read:
     pop rdi
     pop rax
     mov QWORD [buffer1], 0
-          mov rcx, 100
+
+
+      mov rcx, 100
       mov rax, 0
       .lab1:
         mov [buffer1+rcx], 0
       loop .lab1
     jmp _read
+
     .co2:
     cmp BYTE [buffer1], '^'
     jne .co3
@@ -345,7 +341,7 @@ _read:
     mov BYTE al, [buffer1+3] ; al
     mov rcx, rax
     xor rax, rax          
-    call printf          
+    call safe_printf          
     pop r11
     pop r10
     pop r9
@@ -366,15 +362,32 @@ _read:
 
       .co3:
       ; mov rdi, buffer1
-      mov rsi, buffer1
-      push rcx
-      call print_str
-      pop rcx
-      call new_line
 
 
+     
+      xor rax, rax
+      mov BYTE al, [buffer1]
 
+      mov rdi, new_msg
+      mov rsi, rax
+      mov rdx, buffer1
+      inc rdx
       
+
+      call safe_printf
+
+
+
+      ; mov rsi, buffer1
+      ; inc rsi
+      ; push rcx
+      ; call print_str
+      ; pop rcx
+      ; call new_line
+
+
+
+    .clear:
     ;   ;;Очищаем буффер, чтобы он не хранил старые значения
       mov rcx, 100
       mov rax, 0
@@ -421,20 +434,20 @@ _write:
     mov rdx, 100
     syscall
 
-    mov rsi, start_of_msg
-    call print_str
-    mov al, [buffer2]
-    mov [two_symbol_buffer], al
-    mov rsi, two_symbol_buffer
-    call print_str
-    
-    xor rax, rax
-    mov al, [buffer2+1]
-    call number_str
-    call print_str
-    mov rsi, end_of_msg
-    call print_str
-    call new_line
+                    ; mov rsi, start_of_msg
+                    ; call print_str
+                    ; mov al, [buffer2]
+                    ; mov [two_symbol_buffer], al
+                    ; mov rsi, two_symbol_buffer
+                    ; call print_str
+                    
+                    ; xor rax, rax
+                    ; mov al, [buffer2+1]
+                    ; call number_str
+                    ; call print_str
+                    ; mov rsi, end_of_msg
+                    ; call print_str
+                    ; call new_line
 
     
     ; je _start.end
@@ -474,13 +487,14 @@ take_card:
     .nnnext:      ;; cюда если меньше 22 - сразу
     mov rdx, [balance]
     push rax
-    call printf
+    call safe_printf
     pop rax
     mov rax, [RANDOM]
     wh_l:
     mov BYTE [buffer2], '!'
     mov BYTE [buffer2+1], al
     mov BYTE [buffer2+2], 0
+    mov BYTE [buffer2+3], 0
     
     
     ret
@@ -490,7 +504,7 @@ stop_take:
     mov rdi, stop_msg
     mov rsi, [balance]
     push rax
-    call printf
+    call safe_printf
     pop rax
     mov BYTE [buffer2], '#'
     mov BYTE [buffer2+1], 0
@@ -501,9 +515,64 @@ stop_take:
 quit_game:
     mov rdi, quit_msg
     push rax
-    call printf
+    call safe_printf
     pop rax
     mov BYTE [buffer2], '|'
     mov BYTE [buffer2+1], 0
     mov [balance], 0
     ret
+
+
+
+; rdi = форматная строка
+; остальные аргументы printf передаются как обычно
+safe_printf:
+    ; Проверяем текущее выравнивание стека
+    test rsp, 0xF
+    jz .aligned
+    
+    ; Если стек не выровнен, сохраняем факт коррекции
+    mov byte [stack_alignment], 1
+    push rax    ; Корректируем стек (теперь он выровнен)
+    jmp .call_printf
+    
+.aligned:
+    mov byte [stack_alignment], 0
+    
+.call_printf:
+    ; Сохраняем все используемые регистры
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push r8
+    push r9
+    push r10
+    push r11
+    
+    ; Вызов printf
+    xor eax, eax    ; 0 floating point args
+    call printf
+    
+    ; Восстанавливаем регистры
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    
+    ; Проверяем, делали ли мы коррекцию
+    cmp byte [stack_alignment], 1
+    jne .done
+    
+    ; Если делали коррекцию - убираем ее
+    pop rax
+    mov byte [stack_alignment], 0
+    
+.done:
+    ret
+
+

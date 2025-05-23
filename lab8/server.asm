@@ -12,6 +12,11 @@ section '.data' writeable
   sent_gain_msg db '_C!_', 0xA,0
   sent_stop_msg db '_C#_', 0xA,0
   sent_win_msg db '_C^_', 0xA,0
+  read_msg db '_r', 0
+
+  debug_sem_msg db 'Текущее значение семафора: ',0
+
+  DBG_to_others db 'Отправляю другим сообщение о взятии...', 0
 
   user_caused db '_event # caused by %d', 0xA, 0
 
@@ -46,6 +51,15 @@ results2_msg db 0xA,  '______________ Начало игры ______________', 0xA
   inp_msg db '_in_', 0xA, 0
   message_to_all dq  0 ;+0-64 - msg
   max_to21 dq 0, 0
+  stack_alignment db 0
+
+  DBG_write db 'Начинаю запись...', 0xA, 0
+  DBG_write_end db 'Запись завершена.', 0xA,0
+
+  DBG_read db 'Начинаю чтение...', 0xA, 0
+  DBG_read_end db 'Чтение завершено.', 0xA,0
+
+  
 
 
   ids dq 0
@@ -53,8 +67,7 @@ results2_msg db 0xA,  '______________ Начало игры ______________', 0xA
     sm1 dw 0, -1, 4096 
    sm2 dw 0, 1, 4096   
 
-    wsm1 dw 1, -1, 4096 
-   wsm2 dw 1, 1, 4096   
+
   
   
 section '.bss' writable
@@ -62,6 +75,7 @@ section '.bss' writable
   buffer rb 100
   buffer_help rb 200
   read_buffer rb 101
+  temp rb 100
 
   random_desc rq 1
 ;;Структура для клиента
@@ -89,7 +103,9 @@ _start:
     syscall
     
     mov [ids], rax
-    
+    call debug_semop
+
+
     ;;Переводим семафор в состояние готовности
     mov rdi, [ids] ;дескриптор семафора
     mov rsi, 0     ;индекс в массиве
@@ -98,13 +114,7 @@ _start:
     mov rax, 66
     syscall
 
-        ;;Переводим семафор в состояние готовности
-    mov rdi, [ids] ;дескриптор семафора
-    mov rsi, 1     ;индекс в массиве
-    mov rdx, 16    ;выполняемая команда
-    mov r10, 0   ;начальное значение
-    mov rax, 66
-    syscall
+    call debug_semop
 
       ;;Первый процесс создает разделяемую память
     mov rdi, 0    ;начальный адрес выберет сама ОС
@@ -115,6 +125,8 @@ _start:
     mov r9, 0     ;задаем нулевое смещение
     mov rax, 9    ;номер системного вызова mmap
     syscall
+
+    
     
     ;;Сохраняем адрес памяти
     mov [cards_scores_players_current], rax
@@ -248,6 +260,9 @@ _read:
       cmp rax, 0
       je _read     
 
+      mov rsi, DBG_read
+      call print_str
+
       push rdx
       push rax
       push r12  ;user
@@ -279,7 +294,13 @@ _read:
       push r12  ;user
       push rcx
       ; push rax
+
+
+
       call printf
+
+
+
       pop rcx
       pop r12
       pop rax
@@ -311,6 +332,8 @@ _read:
       ; mov byte [rbx+r12], 0
 
       .nnext:
+      mov rsi, DBG_read_end
+      call print_str
       jmp _read
 
       .next12:
@@ -338,6 +361,9 @@ _read:
 
       ;   mov rsi, endgame_msg
       ; call print_str 
+
+       mov rsi, DBG_read_end
+      call print_str
       jmp _read
 
 
@@ -364,6 +390,9 @@ _read:
       call to_all_stop
 
           ; mov byte [rbx+r12], 0
+
+           mov rsi, DBG_read_end
+      call print_str
       jmp _read
 
       .next2:
@@ -403,9 +432,25 @@ _read:
       .lab:
         mov [read_buffer+rcx], 0
       loop .lab 
+      mov rdi, [ids]
+
+
+
+            push rsi
+      mov rsi, user_caused
+      call print_str
+      pop rsi
+      
+  mov rsi, DBG_read_end
+      call print_str
 jmp _read
 
 _write:
+
+    call debug_semop
+
+     mov rsi, DBG_write
+      call print_str
 
     mov rdi, [ids]
     mov rsi, sm1
@@ -445,13 +490,14 @@ _write:
                       ; mov rsi, r12
                       ; call printf
 
-    
-
+mov rsi, DBG_write_end
+      call print_str
 jmp _write
 
       
 _input:
-
+    ;MOV rsi, read_msg
+    ;call print_str
     mov rbx, [enders]
     xor rax, rax
     mov al, [rbx+64]
@@ -469,17 +515,8 @@ _input:
 
     mov rsi, [message_to_all]
     mov byte [rsi+63], 0
-    ; call print_str
-    xor rax, rax
-    ; mov rdi, [address]
-    ; mov BYTE al, [rdi]
 
-    ; mov [rdi+1], al
-     ;;Открываем семафор
-    ; mov rdi, [ids]
-    ; mov rsi, sm2
-    ; mov rdx,0
-    ; mov rax, 65
+
     xor rcx, rcx
     mov rdi, [cards_scores_players_current]
     mov  BYTE cl, [rdi+64]
@@ -498,18 +535,6 @@ _input:
       cmp rcx, 0
       jne .lp2
 
-    ; mov rdi, [ids]
-    ; mov rsi, sm2
-    ; mov rdx,1
-    ; mov rax, 65
-    ; syscall
-    ; mov al, [new_status]
-    ; call number_str
-    ; call print_str
-    ;         mov rdi, [address]
-    ; mov rax, [rdi]
-    ; call number_str
-    ; call print_str
 jmp _input
 
 new_game:
@@ -537,6 +562,10 @@ new_game:
   mov [max_to21], 0
   mov [max_to21+8], 0
   mov QWORD [message_to_all], 0
+
+  call debug_semop
+
+
   ret
 
 calculate_results:
@@ -629,21 +658,27 @@ calculate_results:
   
 
 to_all_takes:
+    ;mov rsi, DBG_to_others
+    ;call print_str
 
     mov rdi, [message_to_all]
     mov BYTE [rdi], '!'
-    mov rcx, r12
-    mov BYTE [rdi+1], cl ; temp
-    mov BYTE [rdi+2], dl;temp
-    mov BYTE [rdi+3], al;temp
-    mov BYTE [rdi+4], 0
+    ;mov rcx, r12
+    ;mov BYTE [rdi+1], cl ; temp
+    ;mov BYTE [rdi+2], dl;temp
+    ;mov BYTE [rdi+3], al;temp
+    ;mov BYTE [rdi+4], 0
                       ; mov rsi, sent_gain_msg
                       ; call print_str
+                              ;mov rsi, DBG_to_others
+    ;call print_str
 
 push rdx
 push rax
 push rcx
 push r12
+        mov rsi, DBG_to_others
+    call print_str
     xor rcx, rcx
     mov rdi, [cards_scores_players_current]
     mov  BYTE cl, [rdi+64]
@@ -651,9 +686,12 @@ push r12
     .lp2:
       push rcx
     ; syscall
+        mov rsi, DBG_to_others
+    call print_str
      ;;Открываем семафор
       mov rdi, [ids]
       mov rsi, sm2
+      call debug_semop
       mov rdx,1
       mov rax, 65
       syscall
@@ -665,6 +703,7 @@ push r12
     pop rcx
     pop rax
     pop rdx
+
 
     ret
 
@@ -735,6 +774,8 @@ win_all:
         push rcx
       ; syscall
       ;;Открываем семафор
+        
+        call debug_semop
         mov rdi, [ids]
         mov rsi, sm2
         mov rdx,1
@@ -749,3 +790,93 @@ win_all:
       pop rax
       pop rdx
       ret
+
+
+debug_semop:
+    ; Сохраняем регистры
+    push rdi
+    push rsi
+    push rdx
+    
+    ; Выводим отладочное сообщение
+    mov rsi, debug_sem_msg
+    call print_str
+    
+        mov rdi, [ids]  ; Дескриптор семафора
+    mov rsi, 0      ; Индекс семафора
+    mov rdx, 12     ; Команда GETVAL
+    xor r10, r10    ; Четвертый аргумент не используется
+    mov rax, 66     ; Системный вызов semctl
+    syscall
+    mov rsi, temp
+    call number_str
+    call print_str
+    call new_line
+    
+    ; Восстанавливаем регистры
+    pop rdx
+    pop rsi
+    pop rdi
+    
+    ret
+
+
+get_sem_value:
+    mov rdx, 11      ; команда GETVAL (11 в Linux)
+    xor r10, r10     ; не используется для GETVAL
+    mov rax, 66      ; syscall semctl
+    syscall
+    ret
+
+
+
+; rdi = форматная строка
+; остальные аргументы printf передаются как обычно
+safe_printf:
+    ; Проверяем текущее выравнивание стека
+    test rsp, 0xF
+    jz .aligned
+    
+    ; Если стек не выровнен, сохраняем факт коррекции
+    mov byte [stack_alignment], 1
+    push rax    ; Корректируем стек (теперь он выровнен)
+    jmp .call_printf
+    
+.aligned:
+    mov byte [stack_alignment], 0
+    
+.call_printf:
+    ; Сохраняем все используемые регистры
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push r8
+    push r9
+    push r10
+    push r11
+    
+    ; Вызов printf
+    xor eax, eax    ; 0 floating point args
+    call printf
+    
+    ; Восстанавливаем регистры
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    
+    ; Проверяем, делали ли мы коррекцию
+    cmp byte [stack_alignment], 1
+    jne .done
+    
+    ; Если делали коррекцию - убираем ее
+    pop rax
+    mov byte [stack_alignment], 0
+    
+.done:
+    ret

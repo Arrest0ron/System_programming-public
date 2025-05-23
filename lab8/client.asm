@@ -25,6 +25,9 @@ take_msg db 'Ваша карта: %d, сумма %d', 0xA,0
   stop_msg db 'Вы остановились на счете %d', 0xA,0
   RANDOM dq 0
   win_win db 'Игрок %d выиграл со счетом %d!.', 0xA, 0
+  start_of_msg db 'Sent message:',0
+  end_of_msg db ':', 0
+  two_symbol_buffer db 0,0
   quit db 'Q',0
   MAX dq 12
   MIN dq 3
@@ -70,11 +73,11 @@ section '.text' executable
 extrn printf
 _start:
 
-   mov rdi, f
+   mov rdi, f     
    mov rax, 2 
    mov rsi, 0o
    syscall 
-   mov [random_desc], rax
+   mov [random_desc], rax ;генерируем случайное число
 
 
   ;  mov rax, 0 ;
@@ -418,6 +421,21 @@ _write:
     mov rdx, 100
     syscall
 
+    mov rsi, start_of_msg
+    call print_str
+    mov al, [buffer2]
+    mov [two_symbol_buffer], al
+    mov rsi, two_symbol_buffer
+    call print_str
+    
+    xor rax, rax
+    mov al, [buffer2+1]
+    call number_str
+    call print_str
+    mov rsi, end_of_msg
+    call print_str
+    call new_line
+
     
     ; je _start.end
 
@@ -447,13 +465,13 @@ take_card:
     mov rsi, [RANDOM]
     add [balance], rax
     cmp [balance], 22
-    jl .nnnext
+    jl .nnnext     
     mov rsi, msg_lost
     call print_str
     mov [balance], 0
-    jmp wh_l
+    jmp wh_l     ;;
 
-    .nnnext:
+    .nnnext:      ;; cюда если меньше 22 - сразу
     mov rdx, [balance]
     push rax
     call printf
@@ -476,6 +494,7 @@ stop_take:
     pop rax
     mov BYTE [buffer2], '#'
     mov BYTE [buffer2+1], 0
+    mov BYTE [buffer2+2], 0
     mov [balance], 0
     ret
 
@@ -486,4 +505,5 @@ quit_game:
     pop rax
     mov BYTE [buffer2], '|'
     mov BYTE [buffer2+1], 0
+    mov [balance], 0
     ret

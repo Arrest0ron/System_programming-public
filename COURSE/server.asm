@@ -349,6 +349,7 @@ _read:
 
         mov BYTE [rdi+0], al         ; кто остановился
         mov BYTE  [rdi+1], '#'       ; остановился!
+        xor rax, rax
         mov BYTE al, [read_buffer+1] 
         mov rbx, r12
         mov rsi, [cards_scores_players_current]

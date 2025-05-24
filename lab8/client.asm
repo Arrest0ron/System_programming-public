@@ -294,10 +294,11 @@ _read:
     mov rsi, rax
     mov BYTE al, [buffer1+2]   ;dl
     mov rdx, rax
-    mov BYTE al, [buffer1+3] ; al
-    mov rcx, rax
+    ; mov BYTE al, [buffer1+3] ; al
+    ; mov rcx, rax
     xor rax, rax          
-    call safe_printf          
+    call safe_printf     
+
     pop r11
     pop r10
     pop r9

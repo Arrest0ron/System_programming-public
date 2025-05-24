@@ -26,13 +26,15 @@ take_msg db 'Ваша карта: %d, сумма %d', 0xA,0
   RANDOM dq 0
   win_win db 'Игрок %d выиграл со счетом %d!.', 0xA, 0
   new_msg db '[Игрок%d]: %s', 0xA, 0
+
   start_of_msg db 'Sent message:',0
    stack_alignment db 0
   end_of_msg db ':', 0
   two_symbol_buffer db 0,0
   quit db 'Q',0
+  newgame db 1
   MAX dq 12
-  MIN dq 3
+  MIN dq 2
   f  db "/dev/urandom",0
   sm1 dw 0, -1, 4096 
   sm2 dw 0,  1, 4096   
@@ -74,6 +76,7 @@ addrlen_server = $ - addrstr_server
 section '.text' executable
 	
 extrn printf
+extrn mydelay
 
 _start:
 
@@ -398,9 +401,34 @@ _read:
 jmp _read
 
 _write:
+    cmp [newgame], 1
+    jne .continue
+    
+    call take_card
+    mov rax, 1
+    mov rdi, [server]
+    mov rsi, buffer2
+    mov rdx, 100
+    syscall
+
+    mov rdi, 15
+    lock inc [temp]
+    lock dec [temp]
+
+    call take_card
+    mov rax, 1
+    mov rdi, [server]
+    mov rsi, buffer2
+    mov rdx, 100
+    syscall
+
+    dec [newgame]
+
+    .continue:
     
     mov rsi, buffer2
     call input_keyboard
+
     
     cmp byte [buffer2], 'Q'
     jne .next3
@@ -424,6 +452,7 @@ _write:
     cmp byte [buffer2], 'S'
     jne .next2
     call stop_take
+
     
     ; jmp _write
     .next2:
@@ -508,7 +537,7 @@ stop_take:
     call safe_printf
     pop rax
     mov BYTE [buffer2], '#'
-    mov BYTE [buffer2+1], 0
+    mov BYTE [buffer2+1], 'e'
     mov BYTE [buffer2+2], 0
     mov [balance], 0
     ret

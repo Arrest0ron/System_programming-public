@@ -290,9 +290,6 @@ _read:
       ; mov rsi, [cards_scores_players_current]
       ; mov rbx, read_buffer
       
-
-
-      
       ;; ПРОВЕРКА НА ВЗЯТИЕ КАРТЫ
       cmp BYTE [read_buffer], '!'
       jne .nocard
@@ -349,29 +346,23 @@ _read:
 
         mov BYTE [rdi+0], al         ; кто остановился
         mov BYTE  [rdi+1], '#'       ; остановился!
-        xor rax, rax
-        mov BYTE al, [read_buffer+1] 
+        ; xor rax, rax
+        ; mov BYTE al, [read_buffer+1] 
         mov rbx, r12
         mov rsi, [cards_scores_players_current]
         mov rax, [rsi+rbx]
         mov BYTE [rdi+2], al        ; баланс остановившегося
         mov BYTE [rdi+3], 0          ; терминатор
 
-
-
         ;;работает до этого момента!
         mov rsi, [cards_scores_players_current]
         lock dec BYTE [rsi+1016]    ; ЧИСЛО НЕ ЗАВЕРШИВШИХ ХОД
-
-
-
 
         call debug_amounts
               push rdi
         mov rdi, 5
         call mydelay
         pop rdi
-
 
         mov rsi, [cards_scores_players_current]
         mov al, 0
@@ -383,9 +374,6 @@ _read:
 
       .nostop:
       
-
-
-
 
 
 
@@ -426,7 +414,7 @@ _read:
 jmp _read
 
 _write:
-  mov rdi, 50
+  mov rdi, 100
   call mydelay
 
   ; mov rsi, message_to_all
@@ -556,9 +544,6 @@ game_over:
         mov rdi, 5
         call mydelay
         pop rdi
-
-
-  
   ret
   
 

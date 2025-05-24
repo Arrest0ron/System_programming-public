@@ -51,9 +51,10 @@ results2_msg db 0xA,  '______________ Начало игры ______________', 0xA
   enders dq 0  ; +0-63 enders, +64 - current_ended
   inp_msg db '_in_', 0xA, 0
   message_to_all dq  0 ;+0-64 - msg
-  max_to21 dq 0, 0
+  max_to21 db 0, 0
   stack_alignment db 0
   temp db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
 
   DBG_start_sem_loop db 'Пользователь написал, начинаю увеличивать семафор', 0xA,0
   DBG_end_sem_loop db 'Завершено!', 0xA,0
@@ -192,6 +193,10 @@ _start:
 
       ; lock inc BYTE [rsi+992]     ; СЕМАФОР
       call debug_atomized
+        ;     push rdi
+        ; mov rdi, 5
+        ; call mydelay
+        ; pop rdi
 
       lock inc BYTE [rsi+1000]    ; ВСЕ СУЩЕСТВОВАВШИЕ ИГРОКИ
       lock inc BYTE [rsi+1008]    ; АКТУАЛЬНОЕ ЧИСЛО ИГРОКОВ
@@ -206,6 +211,10 @@ _start:
       call safe_printf
 
       call debug_amounts
+        ;     push rdi
+        ; mov rdi, 5
+        ; call mydelay
+        ; pop rdi
      ;;Делаем fork for read
    
      mov rax, 57
@@ -237,6 +246,9 @@ _bind_error:
    call exit
    
 _read:
+  mov rdi, 50
+  call mydelay
+
       mov rax, 0 ;номер системного вызова чтения
       mov rdi, r12 ;загружаем файловый дескриптор
       mov rsi, read_buffer ;указываем, куда помещать прочитанные данные
@@ -264,7 +276,15 @@ _read:
       call print_str
 
       call debug_atomized
+      push rdi
+        mov rdi, 5
+        call mydelay
+        pop rdi
       call debug_amounts
+            push rdi
+        mov rdi, 5
+        call mydelay
+        pop rdi
 
     
       ; mov rsi, [cards_scores_players_current]
@@ -279,23 +299,32 @@ _read:
 
         mov rdi, other_takes_msg   ;строка для ввода
 
-        xor rsi, rsi
         xor rax, rax
-        mov BYTE al, [read_buffer]
-        mov rsi, rax
-        xor rax, rax
-        call safe_printf
+        mov rax, r12
+        mov rsi, rax ; id в rsi
+
+        xor rdx, rdx
+        mov BYTE dl, [read_buffer+1] ; сложим выпавшую карточку в rdx
+        
+        mov rbx, r12
+        push rsi
+        mov rsi, [cards_scores_players_current]
+
+        add [rsi+rbx], rdx
+        mov rcx, [rsi+rbx]
+        pop rsi
+        call safe_printf  ; нам нужна строка в rdi, id в rsi, карточка в rdx, баланс в rcx
+        xor rbx, rbx
         mov rdi, [message_to_all]
         mov rax, r12
-
         mov BYTE [rdi+0], al         ; кто взял
         mov BYTE  [rdi+1], '!'       ; взял!
         mov BYTE al, [read_buffer+1] 
         mov BYTE [rdi+2], al         ; сколько 
         mov rbx, r12
         mov rsi, [cards_scores_players_current]
-        add [rsi+rbx], al
-        mov rax, [rsi+rbx]
+        add rsi, rbx
+        mov BYTE al, [rsi]
         mov BYTE [rdi+3], al        ; баланс взявшего 
         mov BYTE [rdi+4], 0          ; терминатор
         jmp _read
@@ -308,14 +337,14 @@ _read:
       jne .nostop
 
         mov rdi, other_stop_msg   ;строка для ввода
+        mov rsi, [cards_scores_players_current]
+         mov rbx, r12
+        mov rdx, [rsi+rbx]
+        mov rsi, r12
+        call safe_printf  
 
-        xor rsi, rsi
-        xor rax, rax
-        mov BYTE al, [read_buffer]
-        mov rsi, rax
-        xor rax, rax
-        call safe_printf
-                mov rdi, [message_to_all]
+
+        mov rdi, [message_to_all]
         mov rax, r12
 
         mov BYTE [rdi+0], al         ; кто остановился
@@ -323,10 +352,32 @@ _read:
         mov BYTE al, [read_buffer+1] 
         mov rbx, r12
         mov rsi, [cards_scores_players_current]
-        add [rsi+rbx], al
         mov rax, [rsi+rbx]
         mov BYTE [rdi+2], al        ; баланс остановившегося
         mov BYTE [rdi+3], 0          ; терминатор
+
+
+
+        ;;работает до этого момента!
+        mov rsi, [cards_scores_players_current]
+        lock dec BYTE [rsi+1016]    ; ЧИСЛО НЕ ЗАВЕРШИВШИХ ХОД
+
+
+
+
+        call debug_amounts
+              push rdi
+        mov rdi, 5
+        call mydelay
+        pop rdi
+
+
+        mov rsi, [cards_scores_players_current]
+        mov al, 0
+        cmp BYTE [rsi+1016], al
+        jne .notend
+        call game_over
+        .notend:
         jmp _read
 
       .nostop:
@@ -401,11 +452,15 @@ _write:
  
 
     call debug_atomized
+    push rdi
+    mov rdi, 5
+    call mydelay
+    pop rdi
 
 
 
-     mov rdi, user_caused
-     mov rsi, r12
+    mov rdi, user_caused
+    mov rsi, r12
     call safe_printf
 
   xor rax, rax
@@ -436,6 +491,79 @@ jmp _write
     call print_str
 
 jmp _write
+
+
+game_over:
+  mov rsi, endgame_msg
+  call print_str
+  mov WORD [max_to21], 0
+  mov rsi, [cards_scores_players_current]
+  mov rcx, 63
+  .game_over_loop:
+    mov BYTE al, [rsi+rcx]
+    cmp al, 21
+    jg .zero
+    cmp al, 1
+    jl .zero
+
+    cmp BYTE al,[max_to21+1]
+    jl .zero
+
+    ; mov rsi, msg_1
+    ; call print_str
+
+    mov [max_to21], cl
+    mov [max_to21+1], al
+
+
+    
+    .zero:
+    mov BYTE [rsi+rcx], 0    
+    dec rcx
+    cmp rcx, -1
+    jne .game_over_loop
+
+
+
+  mov rsi, [cards_scores_players_current]
+  mov al, BYTE [rsi+1008]    ; АКТУАЛЬНОЕ ЧИСЛО ИГРОКОВ
+  mov  BYTE [rsi+1016], al
+  mov rsi, results_msg
+  call print_str 
+
+  call debug_amounts
+
+  mov rdi, win_msg
+  xor rax, rax
+  mov al, [max_to21]
+  mov rsi, rax
+  xor rdx, rdx
+  mov BYTE dl, [max_to21+1]
+  cmp rdx, 0
+  je .no_winners_over
+
+  call safe_printf
+  jmp .over_over
+
+  .no_winners_over:
+  mov rdi, nowin
+  call safe_printf
+
+
+    .over_over:
+        push rdi
+        mov rdi, 5
+        call mydelay
+        pop rdi
+
+
+  
+  ret
+  
+
+
+
+
 
 
 ; rdi = форматная строка
@@ -488,6 +616,8 @@ safe_printf:
     
 .done:
     ret
+
+
 
 
 
